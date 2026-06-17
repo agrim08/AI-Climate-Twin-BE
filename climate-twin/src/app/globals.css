@@ -1,0 +1,385 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Climate Twin — Dark-only Design System
+   Palette inspired by satellite imagery, deep-space, atmosphere & earth data.
+   All token names align with the shadcn/radix CSS-variable convention so that
+   every shadcn component picks them up automatically.
+───────────────────────────────────────────────────────────────────────────── */
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  /* ── Shadcn token aliases ─────────────────────────────────────────── */
+  --color-background:              var(--background);
+  --color-foreground:              var(--foreground);
+  --color-card:                    var(--card);
+  --color-card-foreground:         var(--card-foreground);
+  --color-popover:                 var(--popover);
+  --color-popover-foreground:      var(--popover-foreground);
+  --color-primary:                 var(--primary);
+  --color-primary-foreground:      var(--primary-foreground);
+  --color-secondary:               var(--secondary);
+  --color-secondary-foreground:    var(--secondary-foreground);
+  --color-muted:                   var(--muted);
+  --color-muted-foreground:        var(--muted-foreground);
+  --color-accent:                  var(--accent);
+  --color-accent-foreground:       var(--accent-foreground);
+  --color-destructive:             var(--destructive);
+  --color-border:                  var(--border);
+  --color-input:                   var(--input);
+  --color-ring:                    var(--ring);
+
+  /* ── Climate chart palette ────────────────────────────────────────── */
+  --color-chart-1:                 var(--chart-1);
+  --color-chart-2:                 var(--chart-2);
+  --color-chart-3:                 var(--chart-3);
+  --color-chart-4:                 var(--chart-4);
+  --color-chart-5:                 var(--chart-5);
+
+  /* ── Climate brand tokens (available as Tailwind utilities) ──────── */
+  --color-climate-emerald:         var(--climate-emerald);
+  --color-climate-teal:            var(--climate-teal);
+  --color-climate-cyan:            var(--climate-cyan);
+  --color-climate-sky:             var(--climate-sky);
+  --color-climate-amber:           var(--climate-amber);
+  --color-climate-rose:            var(--climate-rose);
+  --color-climate-surface:         var(--climate-surface);
+  --color-climate-overlay:         var(--climate-overlay);
+
+  /* ── Sidebar ──────────────────────────────────────────────────────── */
+  --color-sidebar:                 var(--sidebar);
+  --color-sidebar-foreground:      var(--sidebar-foreground);
+  --color-sidebar-primary:         var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent:          var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border:          var(--sidebar-border);
+  --color-sidebar-ring:            var(--sidebar-ring);
+
+  /* ── Fonts ────────────────────────────────────────────────────────── */
+  --font-sans:                     var(--font-geist-sans);
+  --font-mono:                     var(--font-geist-mono);
+  --font-heading:                  var(--font-geist-sans);
+
+  /* ── Radius scale ─────────────────────────────────────────────────── */
+  --radius-sm:   calc(var(--radius) * 0.6);
+  --radius-md:   calc(var(--radius) * 0.8);
+  --radius-lg:   var(--radius);
+  --radius-xl:   calc(var(--radius) * 1.4);
+  --radius-2xl:  calc(var(--radius) * 1.8);
+  --radius-3xl:  calc(var(--radius) * 2.2);
+  --radius-4xl:  calc(var(--radius) * 2.6);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   :root — Dark-only Climate Theme
+   We define all tokens directly on :root (no light variant) and force dark
+   mode by adding class="dark" on <html> in layout.tsx.
+
+   Color notation: oklch(lightness chroma hue)
+   Hue guide used here:
+     ~165° = emerald/mint  (primary atmosphere green)
+     ~185° = teal/cyan     (ocean, water data)
+     ~210° = sky blue      (satellite, sky)
+     ~240° = deep navy     (space, night background)
+     ~50°  = amber         (heat, drought warning)
+     ~10°  = rose/red      (extreme events, alerts)
+───────────────────────────────────────────────────────────────────────────── */
+:root,
+.dark {
+  /* ── Core surfaces ──────────────────────────────────────────────── */
+  /*
+   * --background: The deepest layer — the page canvas.
+   * Deep midnight blue-black, evoking the darkness of space and
+   * the dark rendering mode used in satellite data viewers.
+   */
+  --background:               oklch(0.09 0.022 245);
+
+  /*
+   * --foreground: Primary text on background.
+   * Slightly cool off-white for a crisp, scientific readout feel.
+   */
+  --foreground:               oklch(0.93 0.012 210);
+
+  /*
+   * --card: Elevated surface — cards, panels, chart containers.
+   * A step above background; deep navy-slate with a hint of blue chroma.
+   */
+  --card:                     oklch(0.13 0.028 248);
+  --card-foreground:          oklch(0.93 0.012 210);
+
+  /*
+   * --popover: Floating UI surfaces — dropdowns, tooltips, menus.
+   * Slightly lighter than card for layering clarity.
+   */
+  --popover:                  oklch(0.16 0.030 248);
+  --popover-foreground:       oklch(0.93 0.012 210);
+
+  /* ── Primary ────────────────────────────────────────────────────── */
+  /*
+   * --primary: The climate brand's hero color.
+   * Vivid emerald-green — the colour of healthy vegetation on
+   * NDVI satellite maps, and of atmospheric oxygen abundance.
+   */
+  --primary:                  oklch(0.72 0.185 162);
+  --primary-foreground:       oklch(0.09 0.022 245);
+
+  /* ── Secondary ──────────────────────────────────────────────────── */
+  /*
+   * --secondary: Supporting surface/control color.
+   * Deep cool blue-slate — calm, data-centric, minimal.
+   */
+  --secondary:                oklch(0.19 0.042 252);
+  --secondary-foreground:     oklch(0.85 0.018 210);
+
+  /* ── Muted ──────────────────────────────────────────────────────── */
+  --muted:                    oklch(0.16 0.028 248);
+  --muted-foreground:         oklch(0.58 0.040 225);
+
+  /* ── Accent ─────────────────────────────────────────────────────── */
+  /*
+   * Teal-cyan accent — used for hover states, highlights, and
+   * secondary data series (ocean temperature, humidity, etc.)
+   */
+  --accent:                   oklch(0.68 0.150 188);
+  --accent-foreground:        oklch(0.09 0.022 245);
+
+  /* ── Destructive ────────────────────────────────────────────────── */
+  /* Rose-red for critical climate alerts, anomaly warnings */
+  --destructive:              oklch(0.65 0.200 18);
+
+  /* ── Border & input ─────────────────────────────────────────────── */
+  /*
+   * --border: Subtle, dim dividers between surfaces.
+   * Low-chroma cool blue — visible but non-intrusive.
+   */
+  --border:                   oklch(0.26 0.038 248);
+
+  /*
+   * --input: Input field border.
+   * Slightly brighter than --border for interactive affordance.
+   */
+  --input:                    oklch(0.28 0.040 248);
+
+  /*
+   * --ring: Focus ring.
+   * Uses the primary emerald to reinforce brand-colored focus states.
+   */
+  --ring:                     oklch(0.72 0.185 162);
+
+  /* ── Border radius ──────────────────────────────────────────────── */
+  --radius:                   0.625rem;
+
+  /* ── Climate chart palette ──────────────────────────────────────── */
+  /* Ordered for sequential / diverging use in Recharts series */
+  --chart-1:                  oklch(0.72 0.185 162);   /* emerald   — vegetation */
+  --chart-2:                  oklch(0.68 0.150 188);   /* teal      — ocean */
+  --chart-3:                  oklch(0.62 0.140 210);   /* sky blue  — atmosphere */
+  --chart-4:                  oklch(0.82 0.165  68);   /* amber     — temperature */
+  --chart-5:                  oklch(0.65 0.200  18);   /* rose      — alerts */
+
+  /* ── Climate brand tokens ───────────────────────────────────────── */
+  /* Directly usable as bg-climate-emerald, text-climate-teal, etc. */
+  --climate-emerald:          oklch(0.72 0.185 162);
+  --climate-teal:             oklch(0.68 0.150 188);
+  --climate-cyan:             oklch(0.78 0.130 200);
+  --climate-sky:              oklch(0.62 0.140 210);
+  --climate-amber:            oklch(0.82 0.165  68);
+  --climate-rose:             oklch(0.65 0.200  18);
+  --climate-surface:          oklch(0.13 0.028 248);   /* same as --card */
+  --climate-overlay:          oklch(0.09 0.022 245 / 80%); /* semi-transparent bg */
+
+  /* ── Sidebar ────────────────────────────────────────────────────── */
+  --sidebar:                  oklch(0.11 0.026 248);
+  --sidebar-foreground:       oklch(0.88 0.014 210);
+  --sidebar-primary:          oklch(0.72 0.185 162);
+  --sidebar-primary-foreground: oklch(0.09 0.022 245);
+  --sidebar-accent:           oklch(0.16 0.030 248);
+  --sidebar-accent-foreground: oklch(0.88 0.014 210);
+  --sidebar-border:           oklch(0.22 0.034 248);
+  --sidebar-ring:             oklch(0.72 0.185 162);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Base layer resets
+───────────────────────────────────────────────────────────────────────────── */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    @apply font-sans h-full;
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-background text-foreground min-h-full antialiased;
+    /* Subtle noise-like grain texture using SVG data URI for depth */
+    background-image: radial-gradient(
+        ellipse 80% 60% at 50% -10%,
+        oklch(0.22 0.06 210 / 25%) 0%,
+        transparent 60%
+      ),
+      radial-gradient(
+        ellipse 50% 40% at 85% 100%,
+        oklch(0.18 0.08 162 / 12%) 0%,
+        transparent 55%
+      );
+    background-attachment: fixed;
+  }
+
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Selection colour — climate emerald tint */
+  ::selection {
+    background-color: oklch(0.72 0.185 162 / 30%);
+    color: oklch(0.95 0.010 210);
+  }
+
+  /* Scrollbar styling — dark climate aesthetic */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--background);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: oklch(0.30 0.045 248);
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: oklch(0.72 0.185 162 / 60%);
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Utility classes — Climate-specific design tokens
+───────────────────────────────────────────────────────────────────────────── */
+@layer utilities {
+  /* Atmospheric gradient — hero sections, banners */
+  .gradient-atmosphere {
+    background: linear-gradient(
+      135deg,
+      oklch(0.12 0.040 248) 0%,
+      oklch(0.14 0.035 230) 40%,
+      oklch(0.11 0.030 210) 100%
+    );
+  }
+
+  /* Emerald glow for primary CTAs and highlighted cards */
+  .glow-emerald {
+    box-shadow:
+      0 0 0 1px oklch(0.72 0.185 162 / 30%),
+      0 0 20px oklch(0.72 0.185 162 / 15%),
+      0 4px 24px oklch(0.09 0.022 245 / 60%);
+  }
+
+  /* Teal glow for ocean/water data cards */
+  .glow-teal {
+    box-shadow:
+      0 0 0 1px oklch(0.68 0.150 188 / 30%),
+      0 0 20px oklch(0.68 0.150 188 / 15%),
+      0 4px 24px oklch(0.09 0.022 245 / 60%);
+  }
+
+  /* Amber glow for temperature / heat anomaly cards */
+  .glow-amber {
+    box-shadow:
+      0 0 0 1px oklch(0.82 0.165 68 / 30%),
+      0 0 20px oklch(0.82 0.165 68 / 12%),
+      0 4px 24px oklch(0.09 0.022 245 / 60%);
+  }
+
+  /* Rose glow for alert / critical event cards */
+  .glow-rose {
+    box-shadow:
+      0 0 0 1px oklch(0.65 0.200 18 / 30%),
+      0 0 20px oklch(0.65 0.200 18 / 12%),
+      0 4px 24px oklch(0.09 0.022 245 / 60%);
+  }
+
+  /* Glass panel — used over map/satellite imagery */
+  .glass-panel {
+    background: oklch(0.13 0.028 248 / 70%);
+    backdrop-filter: blur(12px) saturate(150%);
+    border: 1px solid oklch(1 0 0 / 8%);
+  }
+
+  /* Gradient text — primary brand heading style */
+  .text-gradient-climate {
+    background: linear-gradient(
+      90deg,
+      oklch(0.78 0.185 162) 0%,
+      oklch(0.72 0.150 188) 50%,
+      oklch(0.68 0.130 210) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  /* Landing page hero grid */
+  .hero-grid {
+    background-image:
+      linear-gradient(oklch(0.72 0.185 162 / 6%) 1px, transparent 1px),
+      linear-gradient(90deg, oklch(0.72 0.185 162 / 6%) 1px, transparent 1px);
+    background-size: 60px 60px;
+  }
+
+  /* Feature card hover glow */
+  .feature-card:hover {
+    box-shadow:
+      0 0 0 1px oklch(0.72 0.185 162 / 20%),
+      0 8px 32px oklch(0.09 0.022 245 / 60%),
+      0 0 40px oklch(0.72 0.185 162 / 8%);
+    transform: translateY(-2px);
+  }
+}
+
+/* ── Landing page animations ──────────────────────────────────────────── */
+@keyframes orbit {
+  from { transform: rotate(0deg) translateX(140px) rotate(0deg); }
+  to   { transform: rotate(360deg) translateX(140px) rotate(-360deg); }
+}
+@keyframes orbit-reverse {
+  from { transform: rotate(0deg) translateX(190px) rotate(0deg); }
+  to   { transform: rotate(-360deg) translateX(190px) rotate(360deg); }
+}
+@keyframes float-up {
+  0%,100% { transform: translateY(0px); }
+  50%      { transform: translateY(-12px); }
+}
+@keyframes glow-pulse {
+  0%,100% { opacity: 0.4; transform: scale(1); }
+  50%      { opacity: 0.7; transform: scale(1.06); }
+}
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes count-ping {
+  0%   { transform: scale(1);    opacity: 1; }
+  75%  { transform: scale(2);    opacity: 0; }
+  100% { transform: scale(2.5);  opacity: 0; }
+}
+
+.animate-orbit          { animation: orbit         18s linear infinite; }
+.animate-orbit-reverse  { animation: orbit-reverse 28s linear infinite; }
+.animate-float          { animation: float-up       6s ease-in-out infinite; }
+.animate-glow-pulse     { animation: glow-pulse     4s ease-in-out infinite; }
+.animate-fade-up        { animation: fade-up       0.7s ease-out both; }
+.animate-fade-up-delay  { animation: fade-up       0.7s ease-out 0.2s both; }
+.animate-fade-up-delay2 { animation: fade-up       0.7s ease-out 0.4s both; }
+.animate-fade-up-delay3 { animation: fade-up       0.7s ease-out 0.6s both; }
