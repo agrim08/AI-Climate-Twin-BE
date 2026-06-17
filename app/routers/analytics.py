@@ -1,0 +1,79 @@
+from datetime import date
+from fastapi import APIRouter, Depends, HTTPException, status, Query
+from sqlalchemy.ext.asyncio import AsyncSession
+from typing import List, Dict, Any
+
+from app.core.database import get_db
+from app.services.analytics import AnalyticsService
+
+router = APIRouter(prefix="/analytics", tags=["Climate Analytics"])
+
+@router.get("/district/{district_id}/summary", response_model=Dict[str, Any])
+async def read_district_summary(district_id: int, db: AsyncSession = Depends(get_db)):
+    """
+    Get aggregate temperature, rainfall, and humidity summaries for a district.
+    """
+    summary = await AnalyticsService.get_district_summary(db, district_id)
+    if not summary:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No climate data found for district ID {district_id}"
+        )
+    return summary
+
+@router.get("/state/{state}/summary", response_model=Dict[str, Any])
+async def read_state_summary(state: str, db: AsyncSession = Depends(get_db)):
+    """
+    Get aggregate summaries across all districts in a state.
+    """
+    summary = await AnalyticsService.get_state_summary(db, state)
+    if not summary:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No climate data found for state '{state}'"
+        )
+    return summary
+
+@router.get("/district/{district_id}/trends/rainfall", response_model=List[Dict[str, Any]])
+async def read_rainfall_trends(district_id: int, limit: int = 100, db: AsyncSession = Depends(get_db)):
+    """
+    Get historical rainfall data points sorted chronologically.
+    """
+    return await AnalyticsService.get_rainfall_trends(db, district_id, limit=limit)
+
+@router.get("/district/{district_id}/trends/temperature", response_model=List[Dict[str, Any]])
+async def read_temperature_trends(district_id: int, limit: int = 100, db: AsyncSession = Depends(get_db)):
+    """
+    Get historical temperature data points sorted chronologically.
+    """
+    return await AnalyticsService.get_temperature_trends(db, district_id, limit=limit)
+
+@router.get("/trends/{district_id}", response_model=List[Dict[str, Any]])
+async def read_historical_trends(
+    district_id: int,
+    aggregation_level: str = Query("monthly", description="Aggregation level: weekly, monthly, or yearly"),
+    start_date: date | None = Query(None, description="Start date for filtering"),
+    end_date: date | None = Query(None, description="End date for filtering"),
+    skip: int = Query(0, ge=0, description="Number of aggregated periods to skip"),
+    limit: int = Query(100, ge=1, le=1000, description="Max number of periods to return"),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get aggregated climate observation trends for rainfall, temperature, and humidity for a district.
+    Supports weekly, monthly, and yearly aggregation, date range filtering, and pagination.
+    """
+    try:
+        return await AnalyticsService.get_historical_trends(
+            db=db,
+            district_id=district_id,
+            aggregation_level=aggregation_level,
+            start_date=start_date,
+            end_date=end_date,
+            skip=skip,
+            limit=limit
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
