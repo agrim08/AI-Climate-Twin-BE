@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from app.models.forecast import Forecast
@@ -99,3 +99,93 @@ class ForecastService:
         await db.commit()
         await db.refresh(db_forecast)
         return db_forecast
+
+    @staticmethod
+    async def generate_7day_forecast(db: AsyncSession, district_id: int):
+        """
+        Generate and save/upsert a 7-day forecast starting from today for a district based on past observations.
+        """
+        # 1. Verify district exists
+        from app.services.district import DistrictService
+        district = await DistrictService.get_district_by_id(db, district_id)
+        if not district:
+            raise ValueError(f"District with ID {district_id} not found.")
+
+        # 2. Fetch recent observations
+        from app.services.climate_observation import ClimateObservationService
+        observations = await ClimateObservationService.get_observations_by_district(db, district_id, limit=30)
+        
+        if not observations:
+            raise ValueError(f"No climate observations found for district ID {district_id} to generate forecast.")
+
+        # Simple moving average model
+        predicted_rain = round(sum(o.rainfall for o in observations) / len(observations), 2)
+        predicted_temp = round(sum(o.temperature for o in observations) / len(observations), 2)
+
+        forecasts = []
+        today = date.today()
+        
+        for i in range(7):
+            target_date = today + timedelta(days=i)
+            query = select(Forecast).where(
+                Forecast.district_id == district_id,
+                Forecast.forecast_date == target_date
+            )
+            result = await db.execute(query)
+            existing = result.scalar_one_or_none()
+            
+            if existing:
+                existing.predicted_rainfall = predicted_rain
+                existing.predicted_temperature = predicted_temp
+                db_forecast = existing
+            else:
+                db_forecast = Forecast(
+                    district_id=district_id,
+                    predicted_rainfall=predicted_rain,
+                    predicted_temperature=predicted_temp,
+                    forecast_date=target_date
+                )
+                db.add(db_forecast)
+            forecasts.append(db_forecast)
+
+        await db.commit()
+        for f in forecasts:
+            await db.refresh(f)
+            
+        return forecasts
+
+    @staticmethod
+    async def get_active_forecasts_by_district(db: AsyncSession, district_id: int):
+        """
+        Retrieve active forecasts for a district (from today onwards).
+        """
+        # Verify district exists
+        from app.services.district import DistrictService
+        district = await DistrictService.get_district_by_id(db, district_id)
+        if not district:
+            raise ValueError(f"District with ID {district_id} not found.")
+
+        query = select(Forecast).where(
+            Forecast.district_id == district_id,
+            Forecast.forecast_date >= date.today()
+        ).order_by(Forecast.forecast_date.asc())
+        result = await db.execute(query)
+        return result.scalars().all()
+
+    @staticmethod
+    async def get_all_forecasts_by_district_paginated(db: AsyncSession, district_id: int, skip: int = 0, limit: int = 100):
+        """
+        Retrieve all forecasts for a district with pagination.
+        """
+        # Verify district exists
+        from app.services.district import DistrictService
+        district = await DistrictService.get_district_by_id(db, district_id)
+        if not district:
+            raise ValueError(f"District with ID {district_id} not found.")
+
+        query = select(Forecast).where(
+            Forecast.district_id == district_id
+        ).order_by(Forecast.forecast_date.desc()).offset(skip).limit(limit)
+        result = await db.execute(query)
+        return result.scalars().all()
+

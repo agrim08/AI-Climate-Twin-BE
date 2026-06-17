@@ -71,7 +71,13 @@ class SimulationResultService:
         """
         Runs a climate simulation for a district by applying delta changes (anomalies) to the baseline climate summary.
         """
-        # 1. Fetch baseline climate data
+        # 1. Verify district exists
+        from app.services.district import DistrictService
+        district = await DistrictService.get_district_by_id(db, district_id)
+        if not district:
+            raise ValueError(f"District with ID {district_id} not found.")
+
+        # 2. Fetch baseline climate data
         from app.services.analytics import AnalyticsService
         baseline = await AnalyticsService.get_district_summary(db, district_id)
         

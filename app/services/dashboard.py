@@ -37,3 +37,74 @@ class DashboardService:
             "latest_forecasts": latest_forecasts,
             "latest_simulations": latest_sims
         }
+
+    @staticmethod
+    async def get_public_overview(db: AsyncSession):
+        """
+        Retrieves total entity counts, top 5 hottest districts, and top 5 highest rainfall districts.
+        """
+        # 1. Fetch counts
+        districts_count = await db.scalar(select(func.count(District.id))) or 0
+        obs_count = await db.scalar(select(func.count(ClimateObservation.id))) or 0
+        forecasts_count = await db.scalar(select(func.count(Forecast.id))) or 0
+        sim_count = await db.scalar(select(func.count(SimulationResult.id))) or 0
+        
+        # 2. Fetch top 5 hottest districts based on average temperature
+        hottest_query = select(
+            District.id.label("district_id"),
+            District.district_name,
+            District.state,
+            func.avg(ClimateObservation.temperature).label("average_temperature")
+        ).join(
+            ClimateObservation, ClimateObservation.district_id == District.id
+        ).group_by(
+            District.id, District.district_name, District.state
+        ).order_by(
+            func.avg(ClimateObservation.temperature).desc()
+        ).limit(5)
+        
+        hottest_result = await db.execute(hottest_query)
+        top_hottest = [
+            {
+                "district_id": r.district_id,
+                "district_name": r.district_name,
+                "state": r.state,
+                "average_temperature": round(float(r.average_temperature), 2)
+            }
+            for r in hottest_result.fetchall()
+        ]
+        
+        # 3. Fetch top 5 highest rainfall districts based on average rainfall
+        rainfall_query = select(
+            District.id.label("district_id"),
+            District.district_name,
+            District.state,
+            func.avg(ClimateObservation.rainfall).label("average_rainfall")
+        ).join(
+            ClimateObservation, ClimateObservation.district_id == District.id
+        ).group_by(
+            District.id, District.district_name, District.state
+        ).order_by(
+            func.avg(ClimateObservation.rainfall).desc()
+        ).limit(5)
+        
+        rainfall_result = await db.execute(rainfall_query)
+        top_rainfall = [
+            {
+                "district_id": r.district_id,
+                "district_name": r.district_name,
+                "state": r.state,
+                "average_rainfall": round(float(r.average_rainfall), 2)
+            }
+            for r in rainfall_result.fetchall()
+        ]
+        
+        return {
+            "total_districts": districts_count,
+            "total_observations": obs_count,
+            "latest_forecasts_count": forecasts_count,
+            "latest_simulations_count": sim_count,
+            "top_5_hottest_districts": top_hottest,
+            "top_5_highest_rainfall_districts": top_rainfall
+        }
+

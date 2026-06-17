@@ -2,14 +2,60 @@ from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Dict, Any
+from pydantic import BaseModel
 
 from app.core.database import get_db
 from app.services.analytics import AnalyticsService
 
 router = APIRouter(prefix="/analytics", tags=["Climate Analytics"])
 
-@router.get("/district/{district_id}/summary", response_model=Dict[str, Any])
+class DistrictSummaryResponse(BaseModel):
+    district_id: int
+    average_rainfall: float
+    average_temperature: float
+    average_humidity: float
+    observation_count: int
+
+class HistoricalTrendResponse(BaseModel):
+    period: date
+    average_rainfall: float
+    average_temperature: float
+    average_humidity: float
+    observation_count: int
+
+class DistrictComparisonResponse(BaseModel):
+    district_id: int
+    district_name: str
+    state: str
+    average_rainfall: float
+    average_temperature: float
+    average_humidity: float
+    observation_count: int
+
+@router.get("/district/{district_id}", response_model=DistrictSummaryResponse)
 async def read_district_summary(district_id: int, db: AsyncSession = Depends(get_db)):
+    """
+    Get aggregate summary stats for a single district.
+    """
+    # Verify district exists
+    from app.services.district import DistrictService
+    district = await DistrictService.get_district_by_id(db, district_id)
+    if not district:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"District with ID {district_id} not found"
+        )
+
+    summary = await AnalyticsService.get_district_summary(db, district_id)
+    if not summary:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No climate data found for district ID {district_id}"
+        )
+    return summary
+
+@router.get("/district/{district_id}/summary", response_model=Dict[str, Any])
+async def read_district_summary_old(district_id: int, db: AsyncSession = Depends(get_db)):
     """
     Get aggregate temperature, rainfall, and humidity summaries for a district.
     """
@@ -48,7 +94,7 @@ async def read_temperature_trends(district_id: int, limit: int = 100, db: AsyncS
     """
     return await AnalyticsService.get_temperature_trends(db, district_id, limit=limit)
 
-@router.get("/trends/{district_id}", response_model=List[Dict[str, Any]])
+@router.get("/trends/{district_id}", response_model=List[HistoricalTrendResponse])
 async def read_historical_trends(
     district_id: int,
     aggregation_level: str = Query("monthly", description="Aggregation level: weekly, monthly, or yearly"),
@@ -62,6 +108,15 @@ async def read_historical_trends(
     Get aggregated climate observation trends for rainfall, temperature, and humidity for a district.
     Supports weekly, monthly, and yearly aggregation, date range filtering, and pagination.
     """
+    # Verify district exists
+    from app.services.district import DistrictService
+    district = await DistrictService.get_district_by_id(db, district_id)
+    if not district:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"District with ID {district_id} not found"
+        )
+
     try:
         return await AnalyticsService.get_historical_trends(
             db=db,
@@ -77,3 +132,15 @@ async def read_historical_trends(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
+
+@router.get("/comparison", response_model=List[DistrictComparisonResponse])
+async def read_district_comparison(
+    skip: int = Query(0, ge=0, description="Number of districts to skip"),
+    limit: int = Query(100, ge=1, le=1000, description="Max number of districts to return"),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Compare average climate metrics across districts.
+    """
+    return await AnalyticsService.get_district_comparison(db, skip=skip, limit=limit)
+

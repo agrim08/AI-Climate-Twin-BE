@@ -28,26 +28,49 @@ async def run_climate_simulation(
     Run a new climate simulation for a specific district based on delta changes.
     Requires bearer token authentication.
     """
-    return await SimulationResultService.run_simulation(
+    try:
+        return await SimulationResultService.run_simulation(
+            db=db,
+            user_id=current_user.id,
+            district_id=sim_in.district_id,
+            rainfall_change=sim_in.rainfall_change,
+            temperature_change=sim_in.temperature_change,
+            humidity_change=sim_in.humidity_change
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+
+@router.get("/history", response_model=List[SimulationResult])
+async def read_simulation_history(
+    skip: int = 0,
+    limit: int = 100,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Retrieve the logged-in user's simulation history.
+    """
+    return await SimulationResultService.get_simulation_results_by_user(
         db=db,
         user_id=current_user.id,
-        district_id=sim_in.district_id,
-        rainfall_change=sim_in.rainfall_change,
-        temperature_change=sim_in.temperature_change,
-        humidity_change=sim_in.humidity_change
+        skip=skip,
+        limit=limit
     )
 
 @router.get("/", response_model=List[SimulationResult])
 async def read_simulation_results(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)):
     return await SimulationResultService.get_simulation_results(db, skip=skip, limit=limit)
 
-@router.get("/{sim_id}", response_model=SimulationResult)
-async def read_simulation_result(sim_id: int, db: AsyncSession = Depends(get_db)):
-    sim = await SimulationResultService.get_simulation_result_by_id(db, sim_id)
+@router.get("/{simulation_id}", response_model=SimulationResult)
+async def read_simulation_result(simulation_id: int, db: AsyncSession = Depends(get_db)):
+    sim = await SimulationResultService.get_simulation_result_by_id(db, simulation_id)
     if not sim:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Simulation result with ID {sim_id} not found"
+            detail=f"Simulation result with ID {simulation_id} not found"
         )
     return sim
 

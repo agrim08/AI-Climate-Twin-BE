@@ -1,15 +1,37 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
+from pydantic import BaseModel
+from typing import List
 
 from app.core.database import get_db
-from app.schemas.dashboard import DashboardOverview
 from app.services.dashboard import DashboardService
 
 router = APIRouter(prefix="/dashboard", tags=["Public Dashboard"])
 
-@router.get("/overview", response_model=DashboardOverview)
+class HottestDistrictDetail(BaseModel):
+    district_id: int
+    district_name: str
+    state: str
+    average_temperature: float
+
+class RainfallDistrictDetail(BaseModel):
+    district_id: int
+    district_name: str
+    state: str
+    average_rainfall: float
+
+class PublicDashboardOverview(BaseModel):
+    total_districts: int
+    total_observations: int
+    latest_forecasts_count: int
+    latest_simulations_count: int
+    top_5_hottest_districts: List[HottestDistrictDetail]
+    top_5_highest_rainfall_districts: List[RainfallDistrictDetail]
+
+@router.get("/overview", response_model=PublicDashboardOverview)
 async def read_dashboard_overview(db: AsyncSession = Depends(get_db)):
     """
-    Get overview metrics and latest records for the public dashboard.
+    Get overview metrics and top-performing/extreme climate districts for the public dashboard.
     """
-    return await DashboardService.get_overview(db)
+    return await DashboardService.get_public_overview(db)
+

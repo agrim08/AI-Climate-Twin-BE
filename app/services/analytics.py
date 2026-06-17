@@ -143,3 +143,39 @@ class AnalyticsService:
             for r in rows
         ]
 
+    @staticmethod
+    async def get_district_comparison(db: AsyncSession, skip: int = 0, limit: int = 100):
+        """
+        Compare average climate metrics across districts using SQL group-by aggregation.
+        """
+        query = select(
+            District.id.label("district_id"),
+            District.district_name,
+            District.state,
+            func.avg(ClimateObservation.rainfall).label("avg_rainfall"),
+            func.avg(ClimateObservation.temperature).label("avg_temperature"),
+            func.avg(ClimateObservation.humidity).label("avg_humidity"),
+            func.count(ClimateObservation.id).label("observation_count")
+        ).join(
+            ClimateObservation, ClimateObservation.district_id == District.id, isouter=True
+        ).group_by(
+            District.id, District.district_name, District.state
+        ).order_by(District.district_name).offset(skip).limit(limit)
+
+        result = await db.execute(query)
+        rows = result.fetchall()
+
+        return [
+            {
+                "district_id": r.district_id,
+                "district_name": r.district_name,
+                "state": r.state,
+                "average_rainfall": round(float(r.avg_rainfall), 2) if r.avg_rainfall is not None else 0.0,
+                "average_temperature": round(float(r.avg_temperature), 2) if r.avg_temperature is not None else 0.0,
+                "average_humidity": round(float(r.avg_humidity), 2) if r.avg_humidity is not None else 0.0,
+                "observation_count": r.observation_count
+            }
+            for r in rows
+        ]
+
+
