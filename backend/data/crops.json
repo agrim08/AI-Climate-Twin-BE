@@ -1,0 +1,44 @@
+{
+  "Wheat": {
+    "min_temp": 10,
+    "max_temp": 25,
+    "min_rainfall": 500,
+    "max_rainfall": 1000
+  },
+  "Rice": {
+    "min_temp": 20,
+    "max_temp": 37,
+    "min_rainfall": 1000,
+    "max_rainfall": 3000
+  },
+  "Bajra": {
+    "min_temp": 25,
+    "max_temp": 35,
+    "min_rainfall": 150,
+    "max_rainfall": 500
+  },
+  "Jowar": {
+    "min_temp": 27,
+    "max_temp": 32,
+    "min_rainfall": 300,
+    "max_rainfall": 1000
+  },
+  "Maize": {
+    "min_temp": 21,
+    "max_temp": 32,
+    "min_rainfall": 450,
+    "max_rainfall": 800
+  },
+  "Cotton": {
+    "min_temp": 21,
+    "max_temp": 30,
+    "min_rainfall": 500,
+    "max_rainfall": 1000
+  },
+  "Sugarcane": {
+    "min_temp": 21,
+    "max_temp": 27,
+    "min_rainfall": 750,
+    "max_rainfall": 1500
+  }
+}
