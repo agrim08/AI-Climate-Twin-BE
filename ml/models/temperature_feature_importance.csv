@@ -1,0 +1,28 @@
+Feature,Importance
+rolling_temp_3m,4613
+rainfall_prev_3,4030
+year,4026
+evabs,3973
+temperature_prev_3,3870
+rainfall_prev_1,3749
+rolling_rainfall_6m,3706
+temperature_prev_1,3640
+rolling_rainfall_3m,3637
+soil_moisture,3476
+rainfall_mm,3388
+sro,2925
+soil_moisture_prev_1,2897
+rolling_temp_6m,2701
+latitude,2521
+longitude,1902
+month_cos,1487
+month_sin,1418
+climate_zone_Central Plateau Region,201
+climate_zone_Indo-Gangetic Plains,129
+climate_zone_Southern Peninsular Region,100
+climate_zone_Western Coastal Region,61
+climate_zone_Eastern Coastal Region,59
+climate_zone_Thar Desert Region,48
+climate_zone_Himalayan Region,48
+climate_zone_Western Ghats Region,27
+climate_zone_North-East Region,0
