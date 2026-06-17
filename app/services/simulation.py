@@ -132,8 +132,50 @@ class SimulationResultService:
             humidity_change=humidity_change,
             result_json=result_json
         )
-        
         db.add(db_sim)
         await db.commit()
         await db.refresh(db_sim)
         return db_sim
+
+    @staticmethod
+    async def run_scenario_simulation(
+        db: AsyncSession,
+        user_id: uuid.UUID,
+        district_id: int,
+        scenario: str
+    ):
+        """
+        Runs a climate simulation for a district using pre-defined scenarios.
+        """
+        scenario_lower = scenario.lower()
+        if scenario_lower == "temperature_plus_1":
+            temp_change = 1.0
+            rain_change = 0.0
+            hum_change = 0.0
+        elif scenario_lower == "temperature_plus_2":
+            temp_change = 2.0
+            rain_change = 0.0
+            hum_change = 0.0
+        elif scenario_lower == "rainfall_minus_10":
+            temp_change = 0.0
+            rain_change = -10.0
+            hum_change = 0.0
+        elif scenario_lower == "rainfall_plus_10":
+            temp_change = 0.0
+            rain_change = 10.0
+            hum_change = 0.0
+        else:
+            raise ValueError(
+                f"Invalid scenario: {scenario}. Choose from: "
+                "temperature_plus_1, temperature_plus_2, rainfall_minus_10, rainfall_plus_10"
+            )
+
+        return await SimulationResultService.run_simulation(
+            db=db,
+            user_id=user_id,
+            district_id=district_id,
+            rainfall_change=rain_change,
+            temperature_change=temp_change,
+            humidity_change=hum_change
+        )
+

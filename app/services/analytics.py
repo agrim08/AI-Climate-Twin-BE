@@ -9,7 +9,7 @@ class AnalyticsService:
     @staticmethod
     async def get_district_summary(db: AsyncSession, district_id: int):
         """
-        Calculate aggregate summary stats for a single district.
+        Calculate aggregate summary stats for a single district, including climate observations and forecasts.
         """
         query = select(
             func.avg(ClimateObservation.rainfall).label("avg_rainfall"),
@@ -20,15 +20,33 @@ class AnalyticsService:
         
         result = await db.execute(query)
         row = result.fetchone()
-        if not row or row.observation_count == 0:
+        
+        # Fetch forecast summaries
+        from app.models.forecast import Forecast
+        forecast_query = select(
+            func.avg(Forecast.predicted_rainfall).label("avg_pred_rainfall"),
+            func.avg(Forecast.predicted_temperature).label("avg_pred_temperature"),
+            func.count(Forecast.id).label("forecast_count")
+        ).where(Forecast.district_id == district_id)
+        
+        forecast_res = await db.execute(forecast_query)
+        f_row = forecast_res.fetchone()
+        
+        obs_count = row.observation_count if row else 0
+        f_count = f_row.forecast_count if f_row else 0
+        
+        if obs_count == 0 and f_count == 0:
             return None
             
         return {
             "district_id": district_id,
-            "average_rainfall": round(float(row.avg_rainfall), 2),
-            "average_temperature": round(float(row.avg_temperature), 2),
-            "average_humidity": round(float(row.avg_humidity), 2),
-            "observation_count": row.observation_count
+            "average_rainfall": round(float(row.avg_rainfall), 2) if row and row.avg_rainfall is not None else 0.0,
+            "average_temperature": round(float(row.avg_temperature), 2) if row and row.avg_temperature is not None else 0.0,
+            "average_humidity": round(float(row.avg_humidity), 2) if row and row.avg_humidity is not None else 0.0,
+            "observation_count": obs_count,
+            "average_predicted_rainfall": round(float(f_row.avg_pred_rainfall), 2) if f_row and f_row.avg_pred_rainfall is not None else 0.0,
+            "average_predicted_temperature": round(float(f_row.avg_pred_temperature), 2) if f_row and f_row.avg_pred_temperature is not None else 0.0,
+            "forecast_count": f_count
         }
 
     @staticmethod
@@ -177,5 +195,65 @@ class AnalyticsService:
             }
             for r in rows
         ]
+
+    @staticmethod
+    async def get_district_comparison_detail(db: AsyncSession, district_id: int):
+        """
+        Compare a single district's climate averages with overall averages across all districts.
+        """
+        # Verify district exists
+        from app.services.district import DistrictService
+        district = await DistrictService.get_district_by_id(db, district_id)
+        if not district:
+            raise ValueError(f"District with ID {district_id} not found.")
+
+        # Get district summary
+        summary = await AnalyticsService.get_district_summary(db, district_id)
+        
+        dist_temp = summary["average_temperature"] if summary else 0.0
+        dist_rain = summary["average_rainfall"] if summary else 0.0
+        dist_hum = summary["average_humidity"] if summary else 0.0
+        obs_count = summary["observation_count"] if summary else 0
+
+        # Get overall averages across all districts
+        overall_query = select(
+            func.avg(ClimateObservation.rainfall).label("avg_rainfall"),
+            func.avg(ClimateObservation.temperature).label("avg_temperature"),
+            func.avg(ClimateObservation.humidity).label("avg_humidity")
+        )
+        overall_res = await db.execute(overall_query)
+        overall_row = overall_res.fetchone()
+        
+        over_temp = round(float(overall_row.avg_temperature), 2) if overall_row and overall_row.avg_temperature is not None else 0.0
+        over_rain = round(float(overall_row.avg_rainfall), 2) if overall_row and overall_row.avg_rainfall is not None else 0.0
+        over_hum = round(float(overall_row.avg_humidity), 2) if overall_row and overall_row.avg_humidity is not None else 0.0
+
+        # Calculate differences
+        diff_temp = round(dist_temp - over_temp, 2)
+        diff_rain = round(dist_rain - over_rain, 2)
+        diff_hum = round(dist_hum - over_hum, 2)
+
+        return {
+            "district_id": district_id,
+            "district_name": district.district_name,
+            "state": district.state,
+            "observation_count": obs_count,
+            "district_averages": {
+                "temperature": dist_temp,
+                "rainfall": dist_rain,
+                "humidity": dist_hum
+            },
+            "overall_averages": {
+                "temperature": over_temp,
+                "rainfall": over_rain,
+                "humidity": over_hum
+            },
+            "differences": {
+                "temperature": diff_temp,
+                "rainfall": diff_rain,
+                "humidity": diff_hum
+            }
+        }
+
 
 

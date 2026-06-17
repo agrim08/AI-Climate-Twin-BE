@@ -18,6 +18,34 @@ class SimulationRunInput(BaseModel):
     temperature_change: float = 0.0  # absolute change in C
     humidity_change: float = 0.0  # percentage change
 
+class ScenarioSimulationInput(BaseModel):
+    scenario: str
+
+@router.post("/run/{district_id}", response_model=SimulationResult, status_code=status.HTTP_201_CREATED)
+async def run_scenario_simulation(
+    district_id: int,
+    input_data: ScenarioSimulationInput,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Run a scenario-based climate simulation for a specific district.
+    Requires Bearer token authentication.
+    """
+    try:
+        return await SimulationResultService.run_scenario_simulation(
+            db=db,
+            user_id=current_user.id,
+            district_id=district_id,
+            scenario=input_data.scenario
+        )
+    except ValueError as e:
+        err_msg = str(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST if "scenario" in err_msg.lower() else status.HTTP_404_NOT_FOUND,
+            detail=err_msg
+        )
+
 @router.post("/run", response_model=SimulationResult, status_code=status.HTTP_201_CREATED)
 async def run_climate_simulation(
     sim_in: SimulationRunInput,

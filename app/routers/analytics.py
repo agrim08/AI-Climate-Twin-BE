@@ -32,6 +32,35 @@ class DistrictComparisonResponse(BaseModel):
     average_humidity: float
     observation_count: int
 
+class DistrictSummaryDetailResponse(BaseModel):
+    district_id: int
+    average_rainfall: float
+    average_temperature: float
+    average_humidity: float
+    observation_count: int
+    average_predicted_rainfall: float
+    average_predicted_temperature: float
+    forecast_count: int
+
+class ComparisonAverages(BaseModel):
+    temperature: float
+    rainfall: float
+    humidity: float
+
+class ComparisonDifferences(BaseModel):
+    temperature: float
+    rainfall: float
+    humidity: float
+
+class DistrictComparisonDetailResponse(BaseModel):
+    district_id: int
+    district_name: str
+    state: str
+    observation_count: int
+    district_averages: ComparisonAverages
+    overall_averages: ComparisonAverages
+    differences: ComparisonDifferences
+
 @router.get("/district/{district_id}", response_model=DistrictSummaryResponse)
 async def read_district_summary(district_id: int, db: AsyncSession = Depends(get_db)):
     """
@@ -143,4 +172,40 @@ async def read_district_comparison(
     Compare average climate metrics across districts.
     """
     return await AnalyticsService.get_district_comparison(db, skip=skip, limit=limit)
+
+@router.get("/summary/{district_id}", response_model=DistrictSummaryDetailResponse)
+async def read_district_summary_detail(district_id: int, db: AsyncSession = Depends(get_db)):
+    """
+    Get detailed climate averages (observations and forecasts) for a district.
+    """
+    # Verify district exists
+    from app.services.district import DistrictService
+    district = await DistrictService.get_district_by_id(db, district_id)
+    if not district:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"District with ID {district_id} not found"
+        )
+
+    summary = await AnalyticsService.get_district_summary(db, district_id)
+    if not summary:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No climate or forecast data found for district ID {district_id}"
+        )
+    return summary
+
+@router.get("/comparison/{district_id}", response_model=DistrictComparisonDetailResponse)
+async def read_district_comparison_detail(district_id: int, db: AsyncSession = Depends(get_db)):
+    """
+    Compare a single district's climate averages with overall averages across all districts.
+    """
+    try:
+        return await AnalyticsService.get_district_comparison_detail(db, district_id)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+
 
