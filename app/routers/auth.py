@@ -1,0 +1,86 @@
+# pyrefly: ignore [missing-import]
+import httpx
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
+from pydantic import BaseModel, EmailStr
+
+from app.core.config import settings
+from app.core.database import get_db
+from app.core.auth import get_current_user
+from app.schemas.user import User, UserCreate
+from app.models.user import UserRole
+
+router = APIRouter(prefix="/auth", tags=["Authentication"])
+
+class UserSignup(BaseModel):
+    email: EmailStr
+    password: str
+    full_name: str
+    role: UserRole = UserRole.CITIZEN
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+@router.post("/signup", response_model=User)
+async def signup(user_in: UserSignup, db: AsyncSession = Depends(get_db)):
+    """
+    Register a new user in Supabase Auth and provision them in the local database.
+    """
+    # 1. Call Supabase Auth API
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            f"{settings.SUPABASE_URL}/auth/v1/signup",
+            headers={"apikey": settings.SUPABASE_ANON_KEY, "Content-Type": "application/json"},
+            json={
+                "email": user_in.email,
+                "password": user_in.password,
+                "options": {
+                    "data": {
+                        "full_name": user_in.full_name
+                    }
+                }
+            }
+        )
+        if response.status_code != 200:
+            raise HTTPException(
+                status_code=response.status_code,
+                detail=response.json().get("msg", "Failed to sign up in Supabase")
+            )
+            
+    # 2. Sync to local database
+    from app.services.user import UserService
+    db_user = await UserService.get_user_by_email(db, user_in.email)
+    if not db_user:
+        local_user_in = UserCreate(email=user_in.email, full_name=user_in.full_name, role=user_in.role)
+        db_user = await UserService.create_user(db, local_user_in)
+        
+    return db_user
+
+@router.post("/login")
+async def login(user_in: UserLogin):
+    """
+    Log in a user via Supabase Auth and return access token JWTs.
+    """
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            f"{settings.SUPABASE_URL}/auth/v1/token?grant_type=password",
+            headers={"apikey": settings.SUPABASE_ANON_KEY, "Content-Type": "application/json"},
+            json={
+                "email": user_in.email,
+                "password": user_in.password
+            }
+        )
+        if response.status_code != 200:
+            raise HTTPException(
+                status_code=response.status_code,
+                detail=response.json().get("error_description", "Invalid login credentials")
+            )
+        return response.json()
+
+@router.get("/me", response_model=User)
+async def get_me(current_user: User = Depends(get_current_user)):
+    """
+    Retrieve the current logged-in user details.
+    """
+    return current_user
