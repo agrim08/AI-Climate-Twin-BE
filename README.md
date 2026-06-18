@@ -1,6 +1,6 @@
-# AI Climate Twin Backend
+# ClimateTwin India Backend
 
-Welcome to the **AI Climate Twin Backend** project! This repository serves as the backend infrastructure and machine learning pipeline for building a digital twin of our climate, specifically focused on localized temperature predictions.
+Welcome to the **ClimateTwin India Backend** project! This repository serves as the production-ready FastAPI backend and machine learning pipeline for building a digital twin of our climate, specifically focused on localized temperature predictions.
 
 ## 🌟 What We Are Building
 
@@ -10,7 +10,18 @@ Currently, the backend accomplishes the following:
 1. **Data Ingestion**: Downloads high-quality climate data (ERA5) from the Copernicus Climate Data Store (CDS).
 2. **Data Processing**: Cleans and aggregates global netCDF files into localized, city-specific datasets.
 3. **Machine Learning**: Trains gradient boosting models (XGBoost, LightGBM) to predict future temperatures based on historical features.
-4. **API Serving**: Exposes the trained models via a blazing-fast FastAPI endpoint for seamless integration with frontend applications or other services.
+4. **API Serving**: Exposes the trained models via a blazing-fast fully asynchronous FastAPI endpoint with SQLAlchemy 2.0 and Supabase PostgreSQL integration.
+
+---
+
+## Features
+
+- **FastAPI**: Fully asynchronous web framework.
+- **SQLAlchemy 2.0 (Async)**: Asynchronous database connection with modern Declarative Mapped models.
+- **Supabase Integration**: Direct configuration for Supabase PostgreSQL. Includes connection pool-pre-pinging to avoid dropped connections.
+- **Alembic**: Asynchronous migration setup.
+- **Pydantic v2**: Type safety and data validation.
+- **Modular Directory Structure**: Organized by core logic, models, schemas, routers, services, and utils.
 
 ---
 
@@ -36,6 +47,41 @@ graph TD
         J -->|JSON Response| I
         I -->|Forecast| H
     end
+```
+
+---
+
+## Folder Structure
+
+```
+backend/
+├── app/
+│   ├── main.py                 # Application entrypoint & configurations
+│   ├── core/
+│   │   ├── config.py           # Settings management (pydantic-settings)
+│   │   └── database.py         # SQLAlchemy async engine & session setup
+│   ├── models/
+│   │   ├── __init__.py         # Imports models for Alembic autogeneration
+│   │   └── climate_data.py     # SQLAlchemy declarative models
+│   ├── schemas/
+│   │   ├── __init__.py
+│   │   └── climate_data.py     # Pydantic v2 validation models
+│   ├── routers/
+│   │   ├── __init__.py
+│   │   └── climate_data.py     # API routes (GET, POST, PUT, DELETE)
+│   ├── services/
+│   │   ├── __init__.py
+│   │   └── climate_data.py     # Business logic & database operations
+│   └── utils/
+│       └── __init__.py         # Utility functions & helpers
+├── alembic/
+│   ├── env.py                  # Alembic migration environment
+│   ├── script.py.mako          # Migration template
+│   └── versions/               # Directory for migration files
+├── alembic.ini                 # Alembic configuration
+├── requirements.txt            # Package dependencies
+├── .env.example                # Sample environment variables config
+└── README.md                   # Setup and execution guide
 ```
 
 ---
@@ -86,30 +132,71 @@ The core of our predictive power relies on Gradient Boosted Trees. We use both *
 
 ## 🚀 Getting Started
 
-### Prerequisites
-- Python 3.10+
+### 1. Prerequisites
+- Python 3.12+
+- Access to a Supabase PostgreSQL instance (or any standard Postgres DB).
 - A CDS API key (configured in `~/.cdsapirc`)
 
-### Installation
+### 2. Local Setup
+Clone/open the repository, navigate to the directory, and perform the following steps:
 
-1. **Clone the repository and enter the directory:**
-   ```bash
-   git clone <repo-url>
-   cd ai-climate-twin-be
-   ```
-
-2. **Create a virtual environment and install dependencies:**
+1. **Create a virtual environment:**
    ```bash
    python -m venv venv
-   source venv/bin/activate  # On Windows use `venv\Scripts\activate`
+   source venv/Scripts/activate  # Windows (CMD/PowerShell)
+   # OR
+   source venv/bin/activate      # macOS/Linux
+   ```
+
+2. **Install dependencies:**
+   ```bash
+   pip install --upgrade pip
    pip install -r requirements.txt
    ```
 
-3. **Run the API:**
+3. **Configure Environment Variables:**
+   Copy `.env.example` to `.env` and configure your database parameters:
    ```bash
-   uvicorn main:app --reload
+   cp .env.example .env
    ```
-   The API will be available at `http://127.0.0.1:8000`.
+   *Note: If using Supabase, navigate to **Project Settings -> Database** in your Supabase dashboard and copy the connection string under **Connection string -> URI** to `DATABASE_URL` in `.env`.*
+
+---
+
+## Database Migrations (Alembic)
+
+All migrations run asynchronously.
+
+### 1. Generating a migration
+When you update or add any model in `app/models/`, run:
+```bash
+alembic revision --autogenerate -m "Add climate records table"
+```
+
+### 2. Applying migrations
+To apply all pending migrations to your database:
+```bash
+alembic upgrade head
+```
+
+### 3. Downgrading migrations
+To rollback the latest migration:
+```bash
+alembic downgrade -1
+```
+
+---
+
+## Running the Server
+
+Start the local development server with Uvicorn:
+```bash
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+- **API Documentation**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) (Swagger UI)
+- **Alternative Documentation**: [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc) (ReDoc)
+- **Health Check Endpoint**: [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health)
 
 ---
 *Note: Please ensure you keep this README updated as new scripts, models, or API endpoints are added to the repository!*
