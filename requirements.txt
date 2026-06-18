@@ -1,0 +1,29 @@
+fastapi
+uvicorn[standard]
+
+# Data Processing
+pandas==2.3.0
+numpy==2.3.1
+
+# Climate Data
+xarray==2025.6.1
+netCDF4==1.7.2
+
+# Machine Learning
+scikit-learn==1.7.0
+xgboost==3.0.2
+lightgbm==4.6.0
+
+# Model Persistence
+joblib==1.5.1
+
+# Visualization & EDA
+matplotlib==3.10.3
+seaborn==0.13.2
+
+# API Downloads (ERA5)
+cdsapi==0.7.7
+
+# Utilities
+python-dotenv==1.1.1
+tqdm==4.67.1
