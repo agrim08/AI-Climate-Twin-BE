@@ -1,8 +1,22 @@
 import uuid
+from datetime import date
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from app.models.simulation import SimulationResult
 from app.schemas.simulation import SimulationResultCreate, SimulationResultUpdate
+
+# Predictor instances cache
+_temp_predictor = None
+_rain_predictor = None
+
+def get_predictors():
+    global _temp_predictor, _rain_predictor
+    if _temp_predictor is None or _rain_predictor is None:
+        from app.ml_services.predict_temperature import TemperaturePredictor
+        from app.ml_services.predict_rainfall import RainfallPredictor
+        _temp_predictor = TemperaturePredictor()
+        _rain_predictor = RainfallPredictor()
+    return _temp_predictor, _rain_predictor
 
 class SimulationResultService:
     @staticmethod
@@ -77,31 +91,72 @@ class SimulationResultService:
         if not district:
             raise ValueError(f"District with ID {district_id} not found.")
 
-        # 2. Fetch baseline climate data
-        from app.services.analytics import AnalyticsService
-        baseline = await AnalyticsService.get_district_summary(db, district_id)
-        
-        if not baseline:
-            # Fallback baseline values if no observations exist yet
-            base_temp = 27.0
-            base_rain = 1200.0
-            base_hum = 60.0
-            obs_count = 0
-        else:
-            base_temp = baseline["average_temperature"]
-            base_rain = baseline["average_rainfall"]
-            base_hum = baseline["average_humidity"]
-            obs_count = baseline["observation_count"]
+        temp_predictor, rain_predictor = get_predictors()
+        from app.ml_services.lookup import ClimateLookup
+        from app.models.climate_observation import ClimateObservation
 
-        # 2. Compute projections:
-        # Rainfall and humidity changes are percentage-based; temperature change is absolute.
-        simulated_temp = round(base_temp + temperature_change, 2)
-        simulated_rain = round(max(0.0, base_rain * (1 + rainfall_change / 100.0)), 2)
+        # 2. Query the latest observation to establish baseline year/month context
+        query = select(ClimateObservation).where(
+            ClimateObservation.district_id == district_id
+        ).order_by(ClimateObservation.observation_date.desc()).limit(1)
+        res = await db.execute(query)
+        latest_obs = res.scalar_one_or_none()
+
+        if latest_obs:
+            year = latest_obs.observation_date.year
+            month = latest_obs.observation_date.month
+            obs_count = 1
+        else:
+            year = 2024
+            month = 6
+            obs_count = 0
+
+        # 3. Retrieve baseline lookup state (deltas = 0)
+        baseline_payload = await ClimateLookup.get_lookup_state(db, {
+            "district_id": district_id,
+            "year": year,
+            "month": month,
+            "temperature_delta": 0.0,
+            "rainfall_delta": 0.0,
+            "soil_moisture_delta": 0.0
+        })
+
+        # Run ML models on baseline state to get predicted baseline temperature and rainfall
+        t_base_res = temp_predictor.predict(baseline_payload)
+        r_base_res = rain_predictor.predict(baseline_payload)
+
+        base_temp = t_base_res["predicted_temperature_c"]
+        base_rain = r_base_res["predicted_rainfall_mm"]
+        
+        # For humidity, use database baseline average or fallback (since it's not predicted by ML models)
+        from app.services.analytics import AnalyticsService
+        db_summary = await AnalyticsService.get_district_summary(db, district_id)
+        base_hum = db_summary["average_humidity"] if db_summary else 60.0
+
+        # 4. Retrieve simulated state (deltas applied)
+        base_rain_prev_1 = baseline_payload.get("rainfall_prev_1", 10.0)
+        base_sm = baseline_payload.get("soil_moisture", 0.2)
+
+        simulated_payload = await ClimateLookup.get_lookup_state(db, {
+            "district_id": district_id,
+            "year": year,
+            "month": month,
+            "temperature_delta": temperature_change,
+            "rainfall_delta": base_rain_prev_1 * (rainfall_change / 100.0),
+            "soil_moisture_delta": base_sm * (humidity_change / 100.0)
+        })
+
+        t_sim_res = temp_predictor.predict(simulated_payload)
+        r_sim_res = rain_predictor.predict(simulated_payload)
+
+        simulated_temp = t_sim_res["predicted_temperature_c"]
+        simulated_rain = r_sim_res["predicted_rainfall_mm"]
         simulated_hum = round(max(0.0, min(100.0, base_hum * (1 + humidity_change / 100.0))), 2)
 
-        # 3. Categorize climate impact metrics
-        drought_risk = "High" if simulated_rain < 600 and simulated_temp > 31.0 else "Moderate" if simulated_rain < 900 else "Low"
-        flood_risk = "High" if simulated_rain > 2000 or (simulated_rain > 1600 and humidity_change > 15) else "Low"
+        # 5. Categorize climate impact metrics (annualize predicted monthly rainfall to match original thresholds)
+        annualized_rain = simulated_rain * 12
+        drought_risk = "High" if annualized_rain < 600 and simulated_temp > 31.0 else "Moderate" if annualized_rain < 900 else "Low"
+        flood_risk = "High" if annualized_rain > 2000 or (annualized_rain > 1600 and humidity_change > 15) else "Low"
         comfort_index = "Uncomfortable" if simulated_temp > 32.0 and simulated_hum > 70.0 else "Pleasant" if 20.0 <= simulated_temp <= 26.0 else "Moderate"
 
         result_json = {
@@ -123,7 +178,7 @@ class SimulationResultService:
             }
         }
 
-        # 4. Save and return simulation record
+        # 6. Save and return simulation record
         db_sim = SimulationResult(
             user_id=user_id,
             district_id=district_id,
@@ -178,4 +233,3 @@ class SimulationResultService:
             temperature_change=temp_change,
             humidity_change=hum_change
         )
-

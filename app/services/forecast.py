@@ -4,6 +4,19 @@ from sqlalchemy.future import select
 from app.models.forecast import Forecast
 from app.schemas.forecast import ForecastCreate, ForecastUpdate
 
+# Predictor instances cache
+_temp_predictor = None
+_rain_predictor = None
+
+def get_predictors():
+    global _temp_predictor, _rain_predictor
+    if _temp_predictor is None or _rain_predictor is None:
+        from app.ml_services.predict_temperature import TemperaturePredictor
+        from app.ml_services.predict_rainfall import RainfallPredictor
+        _temp_predictor = TemperaturePredictor()
+        _rain_predictor = RainfallPredictor()
+    return _temp_predictor, _rain_predictor
+
 class ForecastService:
     @staticmethod
     async def get_forecasts(db: AsyncSession, skip: int = 0, limit: int = 100):
@@ -62,27 +75,39 @@ class ForecastService:
         """
         Generate and save/upsert a forecast for a district on a target date based on past observations.
         """
-        # 1. Fetch recent observations
-        from app.services.climate_observation import ClimateObservationService
-        observations = await ClimateObservationService.get_observations_by_district(db, district_id, limit=30)
+        from app.ml_services.lookup import ClimateLookup
         
-        if not observations:
-            # Fallback values if no historical data is available
-            predicted_rain = 50.0
-            predicted_temp = 28.0
-        else:
-            # Simple moving average model
-            predicted_rain = round(sum(o.rainfall for o in observations) / len(observations), 2)
-            predicted_temp = round(sum(o.temperature for o in observations) / len(observations), 2)
+        # 1. Verify district exists
+        from app.services.district import DistrictService
+        district = await DistrictService.get_district_by_id(db, district_id)
+        if not district:
+            raise ValueError(f"District with ID {district_id} not found.")
 
-        # 2. Check if a forecast already exists for this district + date (upsert logic)
+        temp_predictor, rain_predictor = get_predictors()
+
+        # 2. Build look up state
+        req_payload = {
+            "district_id": district_id,
+            "year": target_date.year,
+            "month": target_date.month
+        }
+        full_payload = await ClimateLookup.get_lookup_state(db, req_payload)
+
+        # 3. Predict values using ML models
+        t_res = temp_predictor.predict(full_payload)
+        r_res = rain_predictor.predict(full_payload)
+
+        predicted_temp = t_res["predicted_temperature_c"]
+        predicted_rain = r_res["predicted_rainfall_mm"]
+
+        # 4. Check if a forecast already exists for this district + date (upsert logic)
         query = select(Forecast).where(
             Forecast.district_id == district_id,
             Forecast.forecast_date == target_date
         )
         result = await db.execute(query)
         existing = result.scalar_one_or_none()
-        
+
         if existing:
             existing.predicted_rainfall = predicted_rain
             existing.predicted_temperature = predicted_temp
@@ -95,7 +120,7 @@ class ForecastService:
                 forecast_date=target_date
             )
             db.add(db_forecast)
-            
+
         await db.commit()
         await db.refresh(db_forecast)
         return db_forecast
@@ -105,35 +130,51 @@ class ForecastService:
         """
         Generate and save/upsert a 7-day forecast starting from today for a district based on past observations.
         """
+        from app.ml_services.lookup import ClimateLookup
+        
         # 1. Verify district exists
         from app.services.district import DistrictService
         district = await DistrictService.get_district_by_id(db, district_id)
         if not district:
             raise ValueError(f"District with ID {district_id} not found.")
 
-        # 2. Fetch recent observations
-        from app.services.climate_observation import ClimateObservationService
-        observations = await ClimateObservationService.get_observations_by_district(db, district_id, limit=30)
-        
-        if not observations:
-            raise ValueError(f"No climate observations found for district ID {district_id} to generate forecast.")
-
-        # Simple moving average model
-        predicted_rain = round(sum(o.rainfall for o in observations) / len(observations), 2)
-        predicted_temp = round(sum(o.temperature for o in observations) / len(observations), 2)
+        temp_predictor, rain_predictor = get_predictors()
 
         forecasts = []
         today = date.today()
         
+        # Cache predictions for the same (year, month) to avoid duplicate model calls inside the 7-day loop
+        prediction_cache = {}
+
         for i in range(7):
             target_date = today + timedelta(days=i)
+            key = (target_date.year, target_date.month)
+
+            if key not in prediction_cache:
+                req_payload = {
+                    "district_id": district_id,
+                    "year": target_date.year,
+                    "month": target_date.month
+                }
+                full_payload = await ClimateLookup.get_lookup_state(db, req_payload)
+                t_res = temp_predictor.predict(full_payload)
+                r_res = rain_predictor.predict(full_payload)
+
+                prediction_cache[key] = {
+                    "temp": t_res["predicted_temperature_c"],
+                    "rain": r_res["predicted_rainfall_mm"]
+                }
+
+            predicted_temp = prediction_cache[key]["temp"]
+            predicted_rain = prediction_cache[key]["rain"]
+
             query = select(Forecast).where(
                 Forecast.district_id == district_id,
                 Forecast.forecast_date == target_date
             )
             result = await db.execute(query)
             existing = result.scalar_one_or_none()
-            
+
             if existing:
                 existing.predicted_rainfall = predicted_rain
                 existing.predicted_temperature = predicted_temp
@@ -151,7 +192,7 @@ class ForecastService:
         await db.commit()
         for f in forecasts:
             await db.refresh(f)
-            
+
         return forecasts
 
     @staticmethod
@@ -188,4 +229,3 @@ class ForecastService:
         ).order_by(Forecast.forecast_date.desc()).offset(skip).limit(limit)
         result = await db.execute(query)
         return result.scalars().all()
-
