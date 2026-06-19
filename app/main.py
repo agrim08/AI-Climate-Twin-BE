@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-from app.routers import user, district, climate_observation, forecast, simulation, auth, analytics, dashboard, climate_import, health, climate_ingestion, drought, extreme_weather
+from app.routers import user, district, climate_observation, forecast, simulation, auth, analytics, dashboard, climate_import, health, climate_ingestion, drought, extreme_weather, temperature, rainfall
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -40,6 +40,8 @@ app.include_router(climate_import.router, prefix=settings.API_V1_STR)
 app.include_router(climate_ingestion.router, prefix=settings.API_V1_STR)
 app.include_router(drought.router, prefix=settings.API_V1_STR)
 app.include_router(extreme_weather.router, prefix=settings.API_V1_STR)
+app.include_router(temperature.router, prefix=settings.API_V1_STR)
+app.include_router(rainfall.router, prefix=settings.API_V1_STR)
 
 @app.get("/", tags=["Root"])
 async def root():
