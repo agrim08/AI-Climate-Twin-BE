@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List
+from typing import List, Optional
 
 from datetime import date
 from pydantic import BaseModel
@@ -104,4 +104,44 @@ async def delete_forecast(forecast_id: int, db: AsyncSession = Depends(get_db)):
             detail=f"Forecast with ID {forecast_id} not found"
         )
     return forecast
+
+class FutureProjectionResponse(BaseModel):
+    date: str
+    year: int
+    month: int
+    predicted_temperature_c: float
+    temperature_confidence: str
+    predicted_rainfall_mm: float
+    rainfall_confidence: str
+    rainfall_confidence_score: float
+    monsoon_status: str
+    drought_category: str
+    drought_confidence: str
+    extreme_weather_risk: str
+    extreme_weather_score: float
+
+@router.get("/projections/{district_id}", response_model=List[FutureProjectionResponse])
+async def get_district_projections(
+    district_id: int,
+    timeframe: str = Query("7day", description="Timeframe of predictions: 7day, 1month, 1year, or a target calendar year (e.g. 2030, 2050)"),
+    temperature_delta: float = Query(0.0, description="Temperature absolute delta anomaly (°C) for simulation"),
+    rainfall_delta: float = Query(0.0, description="Rainfall percentage delta change (%) for simulation"),
+    soil_moisture_delta: float = Query(0.0, description="Soil moisture percentage delta change (%) for simulation"),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Retrieve on-the-fly, dynamic machine learning predictions (temperature, rainfall, drought category, and extreme weather risk)
+    for a district across any timeframe (7 days, 1 month, 12 months, or specific future years like 2030 or 2050) with scenario deltas.
+    """
+    try:
+        return await ForecastService.get_dynamic_projections(
+            db=db,
+            district_id=district_id,
+            timeframe=timeframe,
+            temperature_delta=temperature_delta,
+            rainfall_delta=rainfall_delta,
+            soil_moisture_delta=soil_moisture_delta
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 

@@ -1,7 +1,7 @@
 from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from pydantic import BaseModel
 
 from app.core.database import get_db
@@ -207,5 +207,26 @@ async def read_district_comparison_detail(district_id: int, db: AsyncSession = D
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e)
         )
+
+class DistrictRankingDetail(BaseModel):
+    district_id: int
+    district_name: str
+    state: str
+    value: float
+
+@router.get("/rankings", response_model=List[DistrictRankingDetail])
+async def read_district_rankings(
+    metric: str = Query("hottest", description="Ranking metric: hottest, wettest, or driest"),
+    state: Optional[str] = Query(None, description="Optional state filter"),
+    limit: int = Query(5, ge=1, le=50, description="Limit of rankings to return"),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get top N districts ranked by temperature or rainfall, optionally filtered by state.
+    """
+    try:
+        return await AnalyticsService.get_rankings(db, metric=metric, state=state, limit=limit)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 

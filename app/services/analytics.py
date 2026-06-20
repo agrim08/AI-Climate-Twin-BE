@@ -1,4 +1,5 @@
 from datetime import date
+from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import func
@@ -254,6 +255,54 @@ class AnalyticsService:
                 "humidity": diff_hum
             }
         }
+
+    @staticmethod
+    async def get_rankings(db: AsyncSession, metric: str, state: Optional[str] = None, limit: int = 5):
+        """
+        Get top districts ranked by temperature or rainfall, optionally filtered by state.
+        """
+        metric = metric.lower()
+        if metric not in ["hottest", "wettest", "driest"]:
+            raise ValueError("Invalid metric. Must be 'hottest', 'wettest', or 'driest'.")
+
+        if metric == "hottest":
+            val_col = func.avg(ClimateObservation.temperature).label("val")
+            order_col = func.avg(ClimateObservation.temperature).desc()
+        elif metric == "wettest":
+            val_col = func.avg(ClimateObservation.rainfall).label("val")
+            order_col = func.avg(ClimateObservation.rainfall).desc()
+        else: # driest
+            val_col = func.avg(ClimateObservation.rainfall).label("val")
+            order_col = func.avg(ClimateObservation.rainfall).asc()
+
+        query = select(
+            District.id.label("district_id"),
+            District.district_name,
+            District.state,
+            val_col
+        ).join(
+            ClimateObservation, ClimateObservation.district_id == District.id
+        )
+
+        if state:
+            query = query.where(func.lower(District.state) == func.lower(state))
+
+        query = query.group_by(
+            District.id, District.district_name, District.state
+        ).order_by(order_col).limit(limit)
+
+        res = await db.execute(query)
+        rows = res.fetchall()
+
+        return [
+            {
+                "district_id": r.district_id,
+                "district_name": r.district_name,
+                "state": r.state,
+                "value": round(float(r.val), 2) if r.val is not None else 0.0
+            }
+            for r in rows
+        ]
 
 
 
