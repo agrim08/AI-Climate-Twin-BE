@@ -219,3 +219,20 @@ __marimo__/
 .vscode
 
 ml/data/raw/
+ml/data/processed/
+ml/models/
+ml_research/data/
+app/ml_services/models/
+
+# Large file extensions
+*.csv
+*.nc
+*.pkl
+*.grib
+*.h5
+*.hdf5
+*.joblib
+
+__pycache__
+
+.env
