@@ -13,9 +13,11 @@ The AI Climate Twin models climate patterns at a localized city/district level u
 ### Key Capabilities
 1. **Temperature Forecasting**: Accurate prediction of surface temperatures using historical lags and rolling trends.
 2. **Rainfall & Monsoon Intelligence**: Predicts rainfall while dynamically classifying monsoon phases (Weak/Normal/Strong) using scientifically backed IMD 6-phase encoding.
-3. **Drought Evolution Engine (In Progress)**: Engineers 70+ complex hydrological features, calculates a localized **Composite Drought Severity Score (CDSS)**, and maps drought trajectories (Low/Medium/High/Extreme).
-4. **Scenario Simulation Engine**: The inference layer natively supports "what-if" modifiers (`temperature_delta`, `rainfall_delta`, `soil_moisture_delta`) allowing frontends to simulate the cascading effects of climate change.
-5. **High-Performance API**: Fully asynchronous FastAPI endpoint connected to a Supabase PostgreSQL database via SQLAlchemy 2.0.
+3. **Drought Intelligence Layer**: Engineers 70+ complex features, calculates localized drought severity indices (CDSS), analyzes physical drivers, triggers early warning alerts, and models agricultural and water stress indices.
+4. **Extreme Weather Intelligence Subsystem**: Dual-model cascade predicting Heatwave and Extreme Rainfall classifications and continuous severity indices. Implements compound event risk aggregation, health impact alerts (Green/Yellow/Orange/Red), drainage alerts, and flash flood advisories.
+5. **Scenario Simulation Engine**: Natively supports "what-if" delta modifiers (`temperature_delta`, `rainfall_delta`, `soil_moisture_delta`) at the timeline projection endpoints, enabling cascading dynamic simulations on-the-fly without database mutations.
+6. **Dynamic Dashboard Analytics & Rankings**: Real-time queries for top 5 hottest, wettest, or driest districts in India, filterable by country or specific states (e.g. Rajasthan, Uttar Pradesh).
+7. **High-Performance API**: Fully asynchronous FastAPI endpoint connected to a Supabase PostgreSQL database via SQLAlchemy 2.0.
 
 ---
 
@@ -58,16 +60,17 @@ The Digital Twin is powered by a suite of interdependent models. They are traine
 - **Features Used**: **62 engineered features** including `rainfall_acceleration`, `evabs` (evaporation), `sro` (surface runoff), `soil_moisture`, and IMD 6-Phase Monsoon Encodings (pre-monsoon, active monsoon, post-monsoon).
 - **How it Works**: Rainfall is notoriously difficult due to extreme variance (dry winters vs. torrential monsoons). The model uses hydrological relationships (soil moisture and evaporation) as leading indicators. The inference layer then calculates the ratio of predicted rainfall to the historical baseline to classify the season as a **Weak, Normal, or Strong Monsoon**.
 
-### 3. Drought Evolution Engine
+### 3. Drought Intelligence Layer
 - **Goal**: Predict the Drought Category (Low, Medium, High, Extreme) and output a continuous Drought Severity Score.
-- **Algorithm**: Multi-class Classifier & Regressor (Pending implementation)
-- **Dataset**: `drought_training_dataset.csv` (14k+ rows, 73 features)
-- **Features Used**: 
-  - **SPI (Standardized Precipitation Index)**
-  - **Water Balance**: Rainfall minus Evaporation and Runoff.
-  - **Compound Stress**: Combining heat anomalies with dry soil (`moisture_stress`, `evaporation_stress`).
-  - **Persistence**: `dry_month_streak` and `cumulative_sm_deficit_6m`.
-- **How it Works**: Rather than predicting a raw number, this engine calculates a **Composite Drought Severity Score (CDSS)** weighting rainfall deficits heavily alongside soil moisture and heat stress. It assigns categories using localized, city-level percentiles so that a dry month in the Thar Desert isn't flagged the same way as a dry month in the Himalayan region.
+- **Algorithm**: Multi-class Classifier & Regressor (LightGBM)
+- **Features Used**: Standardized Precipitation Index (SPI), Water Balance (Rainfall minus Evaporation and Runoff), Compound Stress (`moisture_stress`, `evaporation_stress`), and Persistence streaks.
+- **How it Works**: Weighting rainfall deficits alongside soil moisture and heat stress to construct a Composite Drought Severity Score (CDSS). Evaluates drought using localized percentiles so Rajasthan and Himalayas are compared relative to their own climates. Outputs hydrological water intelligence and crop agricultural stress index.
+
+### 4. Extreme Weather Subsystem
+- **Goal**: Predict heatwave and extreme rainfall categories (Low, Medium, High, Extreme) and continuous severity indices (0 to 100).
+- **Algorithm**: Chained Classifiers and Regressors (XGBoost & LightGBM)
+- **Features Used**: Apparent temperature, temperature anomaly/z-score, antecedent soil moisture, extreme precipitation index, runoff pressure, and drainage overload proxies.
+- **How it Works**: Performs heatwave and extreme rainfall classifications. Aggregates combined risk scores, compound event penalties, and generates actionable public safety advisories (e.g., flash flood evacuation notices).
 
 ---
 
@@ -81,7 +84,9 @@ backend/
 │   ├── ml_services/            # 🧠 INFERENCE LAYER (Isolated ML predictions)
 │   │   ├── models/             # Serialized .pkl weights and metrics
 │   │   ├── predict_temperature.py
-│   │   └── predict_rainfall.py # Inference classes with scenario simulation support
+│   │   ├── predict_rainfall.py
+│   │   ├── predict_drought.py
+│   │   └── predict_extreme_weather.py # Inference classes with scenario simulation support
 │   ├── models/                 # SQLAlchemy database models
 │   ├── schemas/                # Pydantic v2 validation models
 │   ├── routers/                # API route definitions
@@ -155,6 +160,15 @@ alembic upgrade head
 
 ---
 
+## 🗄️ Database Seeding
+
+Before running the server, seed the database with the unique districts and historical records:
+```bash
+python seed_database.py
+```
+
+---
+
 ## 🏃‍♂️ Running the Server
 
 Start the local development server with Uvicorn:
@@ -164,3 +178,26 @@ uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 
 - **API Documentation**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) (Swagger UI)
 - **Health Check Endpoint**: [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health)
+
+---
+
+## 🔬 Testing & Verification Suites
+
+We provide automated test scripts to verify each ML integration subsystem. Run them from the project root:
+- **Projections & Rankings Suite**:
+  ```bash
+  venv\Scripts\python.exe ml_research\scripts\verify_projections_and_rankings.py
+  ```
+- **Drought Layer Suite**:
+  ```bash
+  venv\Scripts\python.exe ml_research\scripts\verify_drought_intelligence.py
+  ```
+- **Extreme Weather Suite**:
+  ```bash
+  venv\Scripts\python.exe ml_research\scripts\verify_extreme_weather_intelligence.py
+  ```
+- **Base ML Predictors Suite**:
+  ```bash
+  venv\Scripts\python.exe ml_research\scripts\verify_gap4_integration.py
+  ```
+

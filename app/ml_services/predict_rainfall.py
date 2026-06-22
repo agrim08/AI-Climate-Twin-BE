@@ -137,15 +137,17 @@ class RainfallPredictor:
         month = int(request.get("month", 6))
         
         # Base variables (with modifiers applied where relevant)
+        # For temperature, we apply absolute shift.
+        # For soil moisture and rainfall prev, we apply percentage modifications to align with downstream models.
         temp_c = float(request.get("temperature_c", 30.0)) + temp_delta
-        sm = float(request.get("soil_moisture", 0.2)) + sm_delta
+        sm = max(0.0, min(1.0, float(request.get("soil_moisture", 0.2)) * (1.0 + sm_delta / 100.0)))
         evabs = float(request.get("evabs", -0.001))
         sro = float(request.get("sro", 0.001))
         
         # Lags & Rolling
         temp_prev_1 = float(request.get("temperature_prev_1", 29.0))
         temp_prev_3 = float(request.get("temperature_prev_3", 28.0))
-        rain_prev_1 = float(request.get("rainfall_prev_1", 10.0)) + rain_delta
+        rain_prev_1 = max(0.0, float(request.get("rainfall_prev_1", 10.0)) * (1.0 + rain_delta / 100.0))
         rain_prev_3 = float(request.get("rainfall_prev_3", 5.0))
         sm_prev_1 = float(request.get("soil_moisture_prev_1", 0.15))
         
@@ -280,13 +282,16 @@ class RainfallPredictor:
                 "predicted_rainfall_mm": round(pred_val, 2),
                 "confidence": confidence,
                 "confidence_score": round(score_val, 2),
-                "monsoon_status": monsoon_status
+                "monsoon_status": monsoon_status,
+                "source": request.get("source"),
+                "confidence_source": request.get("confidence_source"),
+                "last_updated": request.get("last_updated")
             }
             
         except Exception as e:
             logger.error(f"Prediction failed: {str(e)}", exc_info=True)
             raise
-
+ 
     def batch_predict(self, requests: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
         Optimized prediction method for multiple locations/timeframes at once.
@@ -323,7 +328,10 @@ class RainfallPredictor:
                     "predicted_rainfall_mm": round(pred_val, 2),
                     "confidence": conf,
                     "confidence_score": round(score_val, 2),
-                    "monsoon_status": monsoon_stat
+                    "monsoon_status": monsoon_stat,
+                    "source": req.get("source"),
+                    "confidence_source": req.get("confidence_source"),
+                    "last_updated": req.get("last_updated")
                 })
                 
             return results

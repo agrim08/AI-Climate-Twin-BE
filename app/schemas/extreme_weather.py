@@ -4,6 +4,7 @@ from typing import Dict, List, Optional
 class ExtremeWeatherInferenceInput(BaseModel):
     # Optional Database Resolution
     district_id: Optional[int] = Field(None, description="Optional District ID to load coordinate/climate state from database")
+    use_live: Optional[bool] = Field(False, description="Whether to optionally resolve the latest live/database climate state")
 
     # Core Climate State Variables
     latitude: float = Field(20.0, description="Latitude of the target location")
@@ -70,6 +71,9 @@ class WeatherPredictorOutput(BaseModel):
 class ExtremeWeatherPredictionResponse(BaseModel):
     heatwave: WeatherPredictorOutput = Field(..., description="Heatwave classification & severity predictions")
     extreme_rainfall: WeatherPredictorOutput = Field(..., description="Extreme rainfall classification & severity predictions")
+    source: Optional[str] = Field(None, description="Source of weather input: LIVE, DATABASE, or HISTORICAL")
+    confidence_source: Optional[float] = Field(None, description="Confidence score of the data source")
+    last_updated: Optional[str] = Field(None, description="Timestamp or date when the source was last updated")
 
 
 class OverallRiskResponse(BaseModel):
@@ -123,3 +127,6 @@ class ExtremeWeatherTwinStateResponse(BaseModel):
     driver_analysis: DriverAnalysisResponse = Field(..., description="Strongest driver factors identification")
     impact_assessment: ImpactAssessmentResponse = Field(..., description="Socio-economic public-health impact advisory")
     early_warning: EarlyWarningResponse = Field(..., description="Multi-level emergency alerts trigger")
+    source: Optional[str] = Field(None, description="Source of weather input: LIVE, DATABASE, or HISTORICAL")
+    confidence_source: Optional[float] = Field(None, description="Confidence score of the data source")
+    last_updated: Optional[str] = Field(None, description="Timestamp or date when the source was last updated")

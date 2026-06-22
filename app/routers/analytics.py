@@ -83,10 +83,11 @@ async def read_district_summary(district_id: int, db: AsyncSession = Depends(get
         )
     return summary
 
-@router.get("/district/{district_id}/summary", response_model=Dict[str, Any])
+@router.get("/district/{district_id}/summary", response_model=Dict[str, Any], deprecated=True)
 async def read_district_summary_old(district_id: int, db: AsyncSession = Depends(get_db)):
     """
-    Get aggregate temperature, rainfall, and humidity summaries for a district.
+    [DEPRECATED] Use GET /analytics/district/{district_id} instead.
+    Retained for backward compatibility only — will be removed in a future release.
     """
     summary = await AnalyticsService.get_district_summary(db, district_id)
     if not summary:

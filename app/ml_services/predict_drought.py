@@ -313,13 +313,16 @@ class DroughtPredictor:
                     "Medium": round(float(probs[1]), 3),
                     "High": round(float(probs[2]), 3),
                     "Extreme": round(float(probs[3]), 3)
-                }
+                },
+                "source": request.get("source"),
+                "confidence_source": request.get("confidence_source"),
+                "last_updated": request.get("last_updated")
             }
             
         except Exception as e:
             logger.error(f"Prediction failed: {str(e)}", exc_info=True)
             raise
-
+ 
     def batch_predict(self, requests: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
         Optimized prediction method for multiple locations/timeframes at once.
@@ -366,7 +369,10 @@ class DroughtPredictor:
                         "Medium": round(float(probs[1]), 3),
                         "High": round(float(probs[2]), 3),
                         "Extreme": round(float(probs[3]), 3)
-                    }
+                    },
+                    "source": req.get("source"),
+                    "confidence_source": req.get("confidence_source"),
+                    "last_updated": req.get("last_updated")
                 })
                 
             return results
@@ -644,11 +650,13 @@ class DroughtPredictor:
             try:
                 # Chain step A: Predict future temperature with delta
                 temp_res = self.temp_predictor.predict(scenario_req)
-                scenario_req["temperature_c"] = temp_res["predicted_temperature_c"]
+                t_delta = float(scenario_req.get("temperature_delta", 0.0))
+                scenario_req["temperature_c"] = temp_res["predicted_temperature_c"] + t_delta
                 
                 # Chain step B: Predict future rainfall using updated temperature and delta
                 rain_res = self.rain_predictor.predict(scenario_req)
-                scenario_req["rainfall_mm"] = rain_res["predicted_rainfall_mm"]
+                r_delta = float(scenario_req.get("rainfall_delta", 0.0))
+                scenario_req["rainfall_mm"] = max(0.0, rain_res["predicted_rainfall_mm"] * (1.0 + r_delta / 100.0))
                 
                 # Chain step C: Scale other state variables by their percentage deltas
                 sm_delta = float(scenario_req.get("soil_moisture_delta", 0.0))
@@ -757,7 +765,10 @@ class DroughtPredictor:
             "drivers": drivers_response,
             "water_intelligence": water_response,
             "agriculture_intelligence": agriculture_response,
-            "early_warning": warning_response
+            "early_warning": warning_response,
+            "source": request.get("source"),
+            "confidence_source": request.get("confidence_source"),
+            "last_updated": request.get("last_updated")
         }
 
 

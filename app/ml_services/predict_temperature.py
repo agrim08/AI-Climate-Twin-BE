@@ -165,7 +165,10 @@ class TemperaturePredictor:
             return {
                 "predicted_temperature_c": round(pred_val, 2),
                 "confidence": confidence,
-                "model_rmse_c": round(self.metrics.get("RMSE", 1.5), 2)
+                "model_rmse_c": round(self.metrics.get("RMSE", 1.5), 2),
+                "source": request.get("source"),
+                "confidence_source": request.get("confidence_source"),
+                "last_updated": request.get("last_updated")
             }
             
         except Exception as e:
@@ -197,11 +200,15 @@ class TemperaturePredictor:
             
             # Format outputs
             results = []
-            for pred_val, conf in zip(predictions, confidences):
+            for idx, (pred_val, conf) in enumerate(zip(predictions, confidences)):
+                req = requests[idx]
                 results.append({
                     "predicted_temperature_c": round(float(pred_val), 2),
                     "confidence": conf,
-                    "model_rmse_c": round(self.metrics.get("RMSE", 1.5), 2)
+                    "model_rmse_c": round(self.metrics.get("RMSE", 1.5), 2),
+                    "source": req.get("source"),
+                    "confidence_source": req.get("confidence_source"),
+                    "last_updated": req.get("last_updated")
                 })
                 
             return results

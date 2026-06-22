@@ -135,6 +135,9 @@ class ClimateLookup:
         
         # 3. Get calendar date parameters
         month = int(req.get("month", 6))
+        if not (1 <= month <= 12):
+            logger.warning(f"Lookup Engine: Invalid month {month} provided. Clamping to [1, 12].")
+            month = max(1, min(12, month))
         year = int(req.get("year", 2024))
         
         # 4. Fetch Climatology Baselines
@@ -157,52 +160,78 @@ class ClimateLookup:
         f_state.update(climo_sea)
         
         # 5. Fetch Historical Record for Lags & Streaks
-        # Find exact year/month for that city, if not found fallback to the latest year (2025)
+        # Find exact year/month for that city, if not found fallback to the latest year containing this month
         city_rows = cls._df[cls._df["city"] == city]
         hist_row = city_rows[(city_rows["year"] == year) & (city_rows["month"] == month)]
         
         if hist_row.empty:
-            # Get latest available year (2025) for that city and month
-            max_year = city_rows["year"].max()
-            hist_row = city_rows[(city_rows["year"] == max_year) & (city_rows["month"] == month)]
+            # Fallback 1: Get the latest available year for that city that has the requested month
+            month_rows = city_rows[city_rows["month"] == month]
+            if not month_rows.empty:
+                max_year_for_month = int(month_rows["year"].max())
+                hist_row = month_rows[month_rows["year"] == max_year_for_month]
+                logger.info(
+                    f"Lookup Engine Fallback 1: Exact record for {city} {year}-{month:02d} not found. "
+                    f"Using latest historical year containing this month: {max_year_for_month}-{month:02d}."
+                )
+            
+            # Fallback 2: Find the absolute nearest record in time (minimizing month difference)
+            if hist_row.empty and not city_rows.empty:
+                time_diff = (city_rows["year"] - year) * 12 + (city_rows["month"] - month)
+                abs_time_diff = time_diff.abs()
+                idx = abs_time_diff.idxmin()
+                hist_row = city_rows.loc[[idx]]
+                fb_year = int(hist_row.iloc[0]["year"])
+                fb_month = int(hist_row.iloc[0]["month"])
+                logger.warning(
+                    f"Lookup Engine Fallback 2: Month {month:02d} not found for {city}. "
+                    f"Using closest chronological record: {fb_year}-{fb_month:02d}."
+                )
             
         if not hist_row.empty:
             h_data = hist_row.iloc[0].to_dict()
+            
+            def get_valid_val(key: str, default: float) -> float:
+                val = h_data.get(key)
+                if val is None or pd.isna(val):
+                    return default
+                return float(val)
+                
             # Add variables
             f_state.update({
-                "temperature_c": h_data.get("temperature_c", 30.0),
-                "rainfall_mm": h_data.get("rainfall_mm", 10.0),
-                "soil_moisture": h_data.get("soil_moisture", 0.20),
-                "evabs": h_data.get("evabs", -0.001),
-                "sro": h_data.get("sro", 0.001),
-                "temperature_prev_1": h_data.get("temperature_prev_1", 29.0),
-                "temperature_prev_3": h_data.get("temperature_prev_3", 28.0),
-                "rainfall_prev_1": h_data.get("rainfall_prev_1", 5.0),
-                "rainfall_prev_3": h_data.get("rainfall_prev_3", 2.0),
-                "soil_moisture_prev_1": h_data.get("soil_moisture_prev_1", 0.18),
-                "rolling_temp_3m": h_data.get("rolling_temp_3m", 28.5),
-                "rolling_rainfall_3m": h_data.get("rolling_rainfall_3m", 15.0),
-                "rolling_temp_6m": h_data.get("rolling_temp_6m", 25.0),
-                "rolling_rainfall_6m": h_data.get("rolling_rainfall_6m", 30.0),
-                "rolling_sm_3m": h_data.get("rolling_sm_3m", 0.22) if "rolling_sm_3m" in h_data else 0.22,
-                "rolling_sm_6m": h_data.get("rolling_sm_6m", 0.25) if "rolling_sm_6m" in h_data else 0.25,
-                "dry_month_streak": h_data.get("dry_month_streak", 0.0) if "dry_month_streak" in h_data else 0.0,
-                "deficit_streak": h_data.get("deficit_streak", 0.0) if "deficit_streak" in h_data else 0.0,
-                "low_sm_streak": h_data.get("low_sm_streak", 0.0) if "low_sm_streak" in h_data else 0.0,
-                "cumulative_deficit_3m": h_data.get("cumulative_deficit_3m", -10.0) if "cumulative_deficit_3m" in h_data else -10.0,
-                "cumulative_deficit_6m": h_data.get("cumulative_deficit_6m", -25.0) if "cumulative_deficit_6m" in h_data else -25.0,
-                "cumulative_sm_deficit_3m": h_data.get("cumulative_sm_deficit_3m", 0.05) if "cumulative_sm_deficit_3m" in h_data else 0.05,
-                "cumulative_sm_deficit_6m": h_data.get("cumulative_sm_deficit_6m", 0.10) if "cumulative_sm_deficit_6m" in h_data else 0.10,
-                "lag1_climatology": h_data.get("lag1_climatology", 10.0) if "lag1_climatology" in h_data else 10.0,
-                "zone_rain_climatology": h_data.get("zone_rain_climatology", 10.0) if "zone_rain_climatology" in h_data else 10.0,
-                "zone_rain_climatology_std": h_data.get("zone_rain_climatology_std", 4.0) if "zone_rain_climatology_std" in h_data else 4.0,
-                "zone_sm_climatology": h_data.get("zone_sm_climatology", 0.20) if "zone_sm_climatology" in h_data else 0.20,
-                "zone_sm_climatology_std": h_data.get("zone_sm_climatology_std", 0.04) if "zone_sm_climatology_std" in h_data else 0.04,
-                "zone_aridity_index": h_data.get("zone_aridity_index", 1.5) if "zone_aridity_index" in h_data else 1.5,
-                "drought_acceleration": h_data.get("drought_acceleration", 0.0) if "drought_acceleration" in h_data else 0.0,
-                "deficit_volatility_3m": h_data.get("deficit_volatility_3m", 5.0) if "deficit_volatility_3m" in h_data else 5.0,
-                "consecutive_hot_months": h_data.get("hw_consecutive_hot_months", 0.0) if "hw_consecutive_hot_months" in h_data else 0.0,
-                "consecutive_wet_months": h_data.get("er_consecutive_wet_months", 0.0) if "er_consecutive_wet_months" in h_data else 0.0
+                "temperature_c": get_valid_val("temperature_c", 30.0),
+                "rainfall_mm": get_valid_val("rainfall_mm", 10.0),
+                "soil_moisture": get_valid_val("soil_moisture", 0.20),
+                "evabs": get_valid_val("evabs", -0.001),
+                "sro": get_valid_val("sro", 0.001),
+                "temperature_prev_1": get_valid_val("temperature_prev_1", 29.0),
+                "temperature_prev_3": get_valid_val("temperature_prev_3", 28.0),
+                "rainfall_prev_1": get_valid_val("rainfall_prev_1", 5.0),
+                "rainfall_prev_3": get_valid_val("rainfall_prev_3", 2.0),
+                "soil_moisture_prev_1": get_valid_val("soil_moisture_prev_1", 0.18),
+                "rolling_temp_3m": get_valid_val("rolling_temp_3m", 28.5),
+                "rolling_rainfall_3m": get_valid_val("rolling_rainfall_3m", 15.0),
+                "rolling_temp_6m": get_valid_val("rolling_temp_6m", 25.0),
+                "rolling_rainfall_6m": get_valid_val("rolling_rainfall_6m", 30.0),
+                "rolling_sm_3m": get_valid_val("rolling_sm_3m", 0.22) if "rolling_sm_3m" in h_data else 0.22,
+                "rolling_sm_6m": get_valid_val("rolling_sm_6m", 0.25) if "rolling_sm_6m" in h_data else 0.25,
+                "dry_month_streak": get_valid_val("dry_month_streak", 0.0) if "dry_month_streak" in h_data else 0.0,
+                "deficit_streak": get_valid_val("deficit_streak", 0.0) if "deficit_streak" in h_data else 0.0,
+                "low_sm_streak": get_valid_val("low_sm_streak", 0.0) if "low_sm_streak" in h_data else 0.0,
+                "cumulative_deficit_3m": get_valid_val("cumulative_deficit_3m", -10.0) if "cumulative_deficit_3m" in h_data else -10.0,
+                "cumulative_deficit_6m": get_valid_val("cumulative_deficit_6m", -25.0) if "cumulative_deficit_6m" in h_data else -25.0,
+                "cumulative_sm_deficit_3m": get_valid_val("cumulative_sm_deficit_3m", 0.05) if "cumulative_sm_deficit_3m" in h_data else 0.05,
+                "cumulative_sm_deficit_6m": get_valid_val("cumulative_sm_deficit_6m", 0.10) if "cumulative_sm_deficit_6m" in h_data else 0.10,
+                "lag1_climatology": get_valid_val("lag1_climatology", 10.0) if "lag1_climatology" in h_data else 10.0,
+                "zone_rain_climatology": get_valid_val("zone_rain_climatology", 10.0) if "zone_rain_climatology" in h_data else 10.0,
+                "zone_rain_climatology_std": get_valid_val("zone_rain_climatology_std", 4.0) if "zone_rain_climatology_std" in h_data else 4.0,
+                "zone_sm_climatology": get_valid_val("zone_sm_climatology", 0.20) if "zone_sm_climatology" in h_data else 0.20,
+                "zone_sm_climatology_std": get_valid_val("zone_sm_climatology_std", 0.04) if "zone_sm_climatology_std" in h_data else 0.04,
+                "zone_aridity_index": get_valid_val("zone_aridity_index", 1.5) if "zone_aridity_index" in h_data else 1.5,
+                "drought_acceleration": get_valid_val("drought_acceleration", 0.0) if "drought_acceleration" in h_data else 0.0,
+                "deficit_volatility_3m": get_valid_val("deficit_volatility_3m", 5.0) if "deficit_volatility_3m" in h_data else 5.0,
+                "consecutive_hot_months": get_valid_val("hw_consecutive_hot_months", 0.0) if "hw_consecutive_hot_months" in h_data else 0.0,
+                "consecutive_wet_months": get_valid_val("er_consecutive_wet_months", 0.0) if "er_consecutive_wet_months" in h_data else 0.0
             })
             
         # 6. Override lookup values with the explicit request values
