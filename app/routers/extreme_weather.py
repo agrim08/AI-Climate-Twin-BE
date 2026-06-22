@@ -37,13 +37,39 @@ async def predict_extreme_weather(input_data: ExtremeWeatherInferenceInput, db: 
             detail="Extreme weather models are not loaded/available."
         )
     try:
-        full_payload = await ClimateLookup.get_lookup_state(db, input_data.model_dump(exclude_unset=True))
-        # Strip out private keys that are used for internal metrics cascading
+        lat = input_data.latitude
+        lon = input_data.longitude
+        if input_data.district_id is not None:
+            try:
+                lat, lon, _ = await ClimateLookup.resolve_district(db, input_data.district_id)
+            except Exception:
+                pass
+
+        from app.utils.cache import PredictionCache
+        from app.core.config import settings
+
+        cache_key = PredictionCache.make_key(
+            lat, lon, input_data.year, input_data.month,
+            temp_delta=input_data.temperature_delta,
+            rain_delta=input_data.rainfall_delta,
+            sm_delta=input_data.soil_moisture_delta,
+            evap_delta=input_data.evaporation_delta,
+            ro_delta=input_data.runoff_delta
+        )
+        cached_res = PredictionCache.get_prediction(cache_key, "extreme_weather")
+        if cached_res is not None:
+            return cached_res
+
+        from app.ml_services.resolver import ClimateStateResolver
+        full_payload = await ClimateStateResolver.resolve_state(db, input_data.model_dump(exclude_unset=True))
+        
         res = predictor.predict(full_payload, apply_deltas=True)
         res["heatwave"].pop("_probabilities", None)
         res["heatwave"].pop("_features", None)
         res["extreme_rainfall"].pop("_probabilities", None)
         res["extreme_rainfall"].pop("_features", None)
+
+        PredictionCache.set_prediction(cache_key, "extreme_weather", res, ttl=settings.CACHE_TTL)
         return res
     except Exception as e:
         raise HTTPException(
@@ -63,11 +89,44 @@ async def predict_extreme_weather_batch(input_data: List[ExtremeWeatherInference
             detail="Extreme weather models are not loaded/available."
         )
     try:
-        resolved_requests = []
+        from app.utils.cache import PredictionCache
+        from app.core.config import settings
+        from app.ml_services.resolver import ClimateStateResolver
+
+        results = []
         for item in input_data:
-            resolved_req = await ClimateLookup.get_lookup_state(db, item.model_dump(exclude_unset=True))
-            resolved_requests.append(resolved_req)
-        return predictor.batch_predict(resolved_requests)
+            lat = item.latitude
+            lon = item.longitude
+            if item.district_id is not None:
+                try:
+                    lat, lon, _ = await ClimateLookup.resolve_district(db, item.district_id)
+                except Exception:
+                    pass
+
+            cache_key = PredictionCache.make_key(
+                lat, lon, item.year, item.month,
+                temp_delta=item.temperature_delta,
+                rain_delta=item.rainfall_delta,
+                sm_delta=item.soil_moisture_delta,
+                evap_delta=item.evaporation_delta,
+                ro_delta=item.runoff_delta
+            )
+            cached_res = PredictionCache.get_prediction(cache_key, "extreme_weather")
+            if cached_res is not None:
+                results.append(cached_res)
+                continue
+
+            full_payload = await ClimateStateResolver.resolve_state(db, item.model_dump(exclude_unset=True))
+            res = predictor.predict(full_payload, apply_deltas=True)
+            res["heatwave"].pop("_probabilities", None)
+            res["heatwave"].pop("_features", None)
+            res["extreme_rainfall"].pop("_probabilities", None)
+            res["extreme_rainfall"].pop("_features", None)
+
+            PredictionCache.set_prediction(cache_key, "extreme_weather", res, ttl=settings.CACHE_TTL)
+            results.append(res)
+
+        return results
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -88,8 +147,36 @@ async def simulate_extreme_weather_scenario(input_data: ExtremeWeatherInferenceI
             detail="Extreme weather models are not loaded/available."
         )
     try:
-        full_payload = await ClimateLookup.get_lookup_state(db, input_data.model_dump(exclude_unset=True))
-        return predictor.simulate_scenario(full_payload)
+        lat = input_data.latitude
+        lon = input_data.longitude
+        if input_data.district_id is not None:
+            try:
+                lat, lon, _ = await ClimateLookup.resolve_district(db, input_data.district_id)
+            except Exception:
+                pass
+
+        from app.utils.cache import PredictionCache
+        from app.core.config import settings
+
+        cache_key = PredictionCache.make_key(
+            lat, lon, input_data.year, input_data.month,
+            temp_delta=input_data.temperature_delta,
+            rain_delta=input_data.rainfall_delta,
+            sm_delta=input_data.soil_moisture_delta,
+            evap_delta=input_data.evaporation_delta,
+            ro_delta=input_data.runoff_delta
+        )
+        cached_res = PredictionCache.get_prediction(cache_key, "extreme_weather_simulation")
+        if cached_res is not None:
+            return cached_res
+
+        from app.ml_services.resolver import ClimateStateResolver
+        full_payload = await ClimateStateResolver.resolve_state(db, input_data.model_dump(exclude_unset=True))
+        
+        pred_res = predictor.simulate_scenario(full_payload)
+        
+        PredictionCache.set_prediction(cache_key, "extreme_weather_simulation", pred_res, ttl=settings.CACHE_TTL)
+        return pred_res
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -110,8 +197,36 @@ async def get_extreme_weather_twin_state(input_data: ExtremeWeatherInferenceInpu
             detail="Extreme weather models are not loaded/available."
         )
     try:
-        full_payload = await ClimateLookup.get_lookup_state(db, input_data.model_dump(exclude_unset=True))
-        return predictor.get_digital_twin_state(full_payload)
+        lat = input_data.latitude
+        lon = input_data.longitude
+        if input_data.district_id is not None:
+            try:
+                lat, lon, _ = await ClimateLookup.resolve_district(db, input_data.district_id)
+            except Exception:
+                pass
+
+        from app.utils.cache import PredictionCache
+        from app.core.config import settings
+
+        cache_key = PredictionCache.make_key(
+            lat, lon, input_data.year, input_data.month,
+            temp_delta=input_data.temperature_delta,
+            rain_delta=input_data.rainfall_delta,
+            sm_delta=input_data.soil_moisture_delta,
+            evap_delta=input_data.evaporation_delta,
+            ro_delta=input_data.runoff_delta
+        )
+        cached_res = PredictionCache.get_prediction(cache_key, "extreme_weather_twin_state")
+        if cached_res is not None:
+            return cached_res
+
+        from app.ml_services.resolver import ClimateStateResolver
+        full_payload = await ClimateStateResolver.resolve_state(db, input_data.model_dump(exclude_unset=True))
+        
+        pred_res = predictor.get_digital_twin_state(full_payload)
+        
+        PredictionCache.set_prediction(cache_key, "extreme_weather_twin_state", pred_res, ttl=settings.CACHE_TTL)
+        return pred_res
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

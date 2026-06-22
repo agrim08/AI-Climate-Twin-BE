@@ -341,7 +341,10 @@ class ExtremeWeatherPredictor:
                     "confidence": er_confidence,
                     "_probabilities": er_probs,
                     "_features": er_feats
-                }
+                },
+                "source": request.get("source"),
+                "confidence_source": request.get("confidence_source"),
+                "last_updated": request.get("last_updated")
             }
         except Exception as e:
             logger.error(f"Extreme weather prediction failed: {str(e)}", exc_info=True)
@@ -432,11 +435,13 @@ class ExtremeWeatherPredictor:
             try:
                 # Step A: Predict temperature with delta
                 temp_out = self.temp_predictor.predict(scenario_req)
-                scenario_req["temperature_c"] = temp_out["predicted_temperature_c"]
+                t_delta = float(scenario_req.get("temperature_delta", 0.0))
+                scenario_req["temperature_c"] = temp_out["predicted_temperature_c"] + t_delta
                 
                 # Step B: Predict rainfall using updated temperature + rainfall_delta
                 rain_out = self.rain_predictor.predict(scenario_req)
-                scenario_req["rainfall_mm"] = rain_out["predicted_rainfall_mm"]
+                r_delta = float(scenario_req.get("rainfall_delta", 0.0))
+                scenario_req["rainfall_mm"] = max(0.0, rain_out["predicted_rainfall_mm"] * (1.0 + r_delta / 100.0))
                 
                 # Step C: Scale soil moisture, evaporation, and runoff
                 sm_d = float(scenario_req.get("soil_moisture_delta", 0.0))
@@ -746,5 +751,8 @@ class ExtremeWeatherPredictor:
             "scenario_analysis": scenario_res,
             "driver_analysis": drivers,
             "impact_assessment": impact,
-            "early_warning": warnings_alert
+            "early_warning": warnings_alert,
+            "source": request.get("source"),
+            "confidence_source": request.get("confidence_source"),
+            "last_updated": request.get("last_updated")
         }

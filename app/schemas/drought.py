@@ -4,6 +4,7 @@ from typing import Dict, List, Optional
 class DroughtInferenceInput(BaseModel):
     # Optional Database Resolution
     district_id: Optional[int] = Field(None, description="Optional District ID to load coordinate/climate state from database")
+    use_live: Optional[bool] = Field(False, description="Whether to optionally resolve the latest live/database climate state")
 
     # Core Climate State Variables
     latitude: float = Field(20.0, description="Latitude of the target location")
@@ -77,6 +78,9 @@ class DroughtPredictionResponse(BaseModel):
     confidence_score: float = Field(..., description="Probability of the predicted class (0.0 to 1.0)")
     confidence_level: str = Field(..., description="Confidence level: High, Medium, Low")
     probabilities: Dict[str, float] = Field(..., description="Probability distribution across all categories")
+    source: Optional[str] = Field(None, description="Source of weather input: LIVE, DATABASE, or HISTORICAL")
+    confidence_source: Optional[float] = Field(None, description="Confidence score of the data source")
+    last_updated: Optional[str] = Field(None, description="Timestamp or date when the source was last updated")
 
 
 class ScenarioSimulationResponse(BaseModel):
@@ -117,3 +121,6 @@ class DroughtTwinStateResponse(BaseModel):
     water_intelligence: WaterStressResponse = Field(..., description="Water resource stress and risk assessments")
     agriculture_intelligence: AgriculturalStressResponse = Field(..., description="Agricultural stress, risk, and crop indicators")
     early_warning: EarlyWarningResponse = Field(..., description="Drought early warning triggering and messages")
+    source: Optional[str] = Field(None, description="Source of weather input: LIVE, DATABASE, or HISTORICAL")
+    confidence_source: Optional[float] = Field(None, description="Confidence score of the data source")
+    last_updated: Optional[str] = Field(None, description="Timestamp or date when the source was last updated")

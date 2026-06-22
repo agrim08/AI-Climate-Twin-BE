@@ -4,6 +4,7 @@ from typing import Dict, List, Optional
 class TemperatureInferenceInput(BaseModel):
     # Optional Database Resolution
     district_id: Optional[int] = Field(None, description="Optional District ID to load coordinate/climate state from database")
+    use_live: Optional[bool] = Field(False, description="Whether to optionally resolve the latest live/database climate state")
 
     # Core Climate State Variables
     latitude: float = Field(20.0, description="Latitude of the target location")
@@ -58,3 +59,6 @@ class TemperaturePredictionResponse(BaseModel):
     predicted_temperature_c: float = Field(..., description="Predicted monthly mean temperature in Celsius")
     confidence: str = Field(..., description="Prediction confidence level: low, medium, high")
     model_rmse_c: float = Field(..., description="Root Mean Squared Error of the model on validation data")
+    source: Optional[str] = Field(None, description="Source of weather input: LIVE, DATABASE, or HISTORICAL")
+    confidence_source: Optional[float] = Field(None, description="Confidence score of the data source")
+    last_updated: Optional[str] = Field(None, description="Timestamp or date when the source was last updated")
