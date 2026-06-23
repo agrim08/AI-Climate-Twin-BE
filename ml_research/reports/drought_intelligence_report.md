@@ -1,321 +1,227 @@
-# Drought Intelligence Layer: Production Architecture and Scientific Methodology Report
+# Drought Intelligence Report
 
-This document details the production-ready **Drought Intelligence Subsystem** integrated into the Climate Digital Twin platform of India. It outlines the core architecture, data schemas, simulation methodologies, and deployment recommendations for production engineering.
+## Executive Summary
+A production-ready drought intelligence dataset has been engineered for the
+AI Climate Digital Twin of India.
+
+- **Total Records**: 14,241
+- **Total Features**: 73
+- **Drought Target**: `drought_category` (Low / Medium / High / Extreme)
+- **Severity Score**: `drought_severity_score` (Composite CDSS, 0–1 scale)
 
 ---
 
-## 1. System Architecture
+## Drought Formation Analysis
 
-The Drought Intelligence Layer is designed as a highly modular, decoupled service layer that sits on top of three serialized Machine Learning models:
-- **Temperature Predictor Model** (`temperature.pkl`)
-- **Rainfall Predictor Model** (`rainfall.pkl`)
-- **Drought Evolution Model** (`drought.pkl`)
+Drought in India is driven by:
+1. **Monsoon failures**: Below-normal JJAS rainfall is the primary trigger.
+2. **Soil moisture depletion**: Persists weeks after rainfall stops; crucial for agriculture.
+3. **Temperature amplification**: Warm anomalies increase evapotranspiration demand.
+4. **Evaporation imbalance**: High demand with low supply creates atmospheric drought.
+5. **Runoff collapse**: Dry soils absorb rainfall, reducing river flows.
 
-In a scenario-testing sandbox, the models are chained sequentially to form a cascading Climate Digital Twin.
-
-### Chained Digital Twin Architecture Workflow
-
-```mermaid
-graph TD
-    subgraph Input ["1. Inputs & Parameters"]
-        RawState["Baseline Climate State<br>(temp, rain, soil moisture, evabs, sro)"]
-        Deltas["Scenario Deltas<br>(temp_delta, rain_delta, sm_delta, evap_delta, ro_delta)"]
-    end
-
-    subgraph Chaining ["2. Preferred Chained Pipeline"]
-        TempPredictor["TemperaturePredictor<br>(Predicts temperature_c + temp_delta)"]
-        RainPredictor["RainfallPredictor<br>(Predicts rainfall_mm using updated temp)"]
-        StateIntegrator["Update Climate State<br>(Applies sm_delta, evap_delta, ro_delta)"]
-        DroughtPredictor["DroughtPredictor<br>(Predicts final drought category & probs)"]
-    end
-
-    subgraph Fallback ["3. Fallback Direct Modifier"]
-        DirectDelta["Direct Variable Math<br>(Adds temp_delta, scales rain/sm/evap/ro by %)"]
-    end
-
-    subgraph Output ["4. Multi-Dimensional Intelligence"]
-        DroughtPred["Drought Predictions<br>(Category, Risk Score, Probabilities)"]
-        DriverAnal["Driver Contribution Analysis<br>(Top Drivers list)"]
-        WaterIntel["Water Stress Assessment<br>(WSI, Reservoir Risk, Aquifer Risk)"]
-        AgriIntel["Agricultural Intelligence<br>(Crop Stress, Irrigation Urgency)"]
-        EarlyWarn["Early Warning System<br>(Alert Warnings & Warnings)"]
-    end
-
-    RawState --> TempPredictor
-    Deltas --> TempPredictor
-    TempPredictor --> RainPredictor
-    RainPredictor --> StateIntegrator
-    StateIntegrator --> DroughtPredictor
-    
-    RawState -.->|Predictors Missing| Fallback
-    Deltas -.->|Predictors Missing| Fallback
-    Fallback --> DroughtPredictor
-    
-    DroughtPredictor --> DroughtPred
-    DroughtPredictor --> DriverAnal
-    DroughtPredictor --> WaterIntel
-    DroughtPredictor --> AgriIntel
-    DroughtPredictor --> EarlyWarn
+### Key Correlations (Spearman)
+```
+               rainfall_mm  soil_moisture  evabs    sro  temperature_c
+rainfall_mm          1.000          0.738 -0.295  0.964          0.047
+soil_moisture        0.738          1.000 -0.419  0.789         -0.220
+evabs               -0.295         -0.419  1.000 -0.337         -0.081
+sro                  0.964          0.789 -0.337  1.000         -0.017
+temperature_c        0.047         -0.220 -0.081 -0.017          1.000
 ```
 
 ---
 
-## 2. Input Schema
+## Drought Severity Methodology (CDSS Formula)
 
-The input schema accepts a comprehensive snapshot of climate state variables, historical trends, regional climatology, and scenario deltas:
-
-| Parameter | Type | Default | Description |
-|---|---|---|---|
-| **latitude** | `float` | `20.0` | Target coordinate latitude |
-| **longitude** | `float` | `80.0` | Target coordinate longitude |
-| **year** | `int` | `2024` | Calendar year |
-| **month** | `int` | `6` | Calendar month (1–12) |
-| **temperature_c** | `float` | `30.0` | Mean monthly temperature in Celsius |
-| **rainfall_mm** | `float` | `10.0` | Cumulative monthly rainfall in mm |
-| **soil_moisture** | `float` | `0.2` | Soil moisture index (0.0 to 1.0) |
-| **evabs** | `float` | `-0.001` | Evaporation flux (negative value) |
-| **sro** | `float` | `0.001` | Surface runoff depth in mm |
-| **temperature_prev_1** | `float` | `29.0` | Preceding month's temperature |
-| **temperature_prev_3** | `float` | `28.0` | Month t-3 temperature |
-| **rainfall_prev_1** | `float` | `5.0` | Preceding month's rainfall |
-| **rainfall_prev_3** | `float` | `2.0` | Month t-3 rainfall |
-| **soil_moisture_prev_1** | `float` | `0.18` | Preceding month's soil moisture |
-| **rolling_temp_3m** | `float` | `28.5` | 3-month rolling mean temperature |
-| **rolling_temp_6m** | `float` | `25.0` | 6-month rolling mean temperature |
-| **rolling_rainfall_3m** | `float` | `15.0` | 3-month rolling mean rainfall |
-| **rolling_rainfall_6m** | `float` | `30.0` | 6-month rolling mean rainfall |
-| **rolling_sm_3m** | `float` | `0.22` | 3-month rolling mean soil moisture |
-| **rolling_sm_6m** | `float` | `0.25` | 6-month rolling mean soil moisture |
-| **dry_month_streak** | `float` | `0.0` | Consecutive dry months streak |
-| **low_sm_streak** | `float` | `0.0` | Consecutive low soil moisture streak |
-| **rainfall_climatology** | `float` | `12.0` | Historical mean rainfall for the month |
-| **rainfall_climatology_std** | `float` | `5.0` | Standard deviation of rainfall climatology |
-| **sm_climatology** | `float` | `0.25` | Historical mean soil moisture for the month |
-| **sm_climatology_std** | `float` | `0.05` | Standard deviation of soil moisture climatology |
-| **temperature_climatology** | `float` | `28.0` | Historical mean temperature for the month |
-| **temperature_climatology_std** | `float` | `2.0` | Standard deviation of temperature climatology |
-| **temperature_delta** | `float` | `0.0` | Temperature modifier delta (°C) |
-| **rainfall_delta** | `float` | `0.0` | Rainfall percentage modifier delta (%) |
-| **soil_moisture_delta** | `float` | `0.0` | Soil moisture percentage modifier delta (%) |
-| **evaporation_delta** | `float` | `0.0` | Evaporation percentage modifier delta (%) |
-| **runoff_delta** | `float` | `0.0` | Runoff percentage modifier delta (%) |
-| **climate_zone** | `str` | `"Indo-Gangetic Plains"` | Climate zone OHE category |
-
----
-
-## 3. Output Schema
-
-The unified Digital Twin response contains six main intelligence blocks:
-
-```json
-{
-  "drought_prediction": {
-    "drought_category": "Low | Medium | High | Extreme",
-    "severity_score": 0.542,
-    "drought_risk_score": 0.542,
-    "confidence_score": 0.812,
-    "confidence_level": "High | Medium | Low",
-    "probabilities": {
-      "Low": 0.05,
-      "Medium": 0.138,
-      "High": 0.612,
-      "Extreme": 0.20
-    }
-  },
-  "scenario_analysis": {
-    "baseline_category": "Medium",
-    "baseline_score": 0.450,
-    "scenario_category": "High",
-    "scenario_score": 0.812,
-    "risk_change": "+1 level"
-  },
-  "drivers": {
-    "top_drivers": ["Rainfall Deficit", "Low Soil Moisture"]
-  },
-  "water_intelligence": {
-    "water_stress_index": 68.2,
-    "reservoir_risk": "High",
-    "groundwater_risk": "Medium",
-    "water_availability_status": "Stressed"
-  },
-  "agriculture_intelligence": {
-    "crop_stress_index": 71.4,
-    "irrigation_need": "High",
-    "agricultural_risk": "High"
-  },
-  "early_warning": {
-    "warning": true,
-    "warning_level": "High",
-    "message": "Elevated High Drought probability: 61.2%."
-  }
-}
+```
+CDSS = 0.30 × norm(-SPI) 
+     + 0.25 × norm(-SM_zscore) 
+     + 0.15 × norm(Temperature_zscore)
+     + 0.15 × norm(Evaporation_stress)
+     + 0.15 × norm(Hydrological_stress)
 ```
 
----
-
-## 4. Scenario Simulation Methodology (Digital Twin Chaining)
-
-When a scenario simulation request is made with active delta modifiers:
-1. **Baseline State Calculation**: All deltas (`temperature_delta`, `rainfall_delta`, `soil_moisture_delta`, `evaporation_delta`, `runoff_delta`) are forced to `0.0` to run the baseline model.
-2. **Preferred Chained Pipeline Execution**:
-   - `TemperaturePredictor` runs using `temperature_delta` to output the simulated `temperature_c`.
-   - `RainfallPredictor` runs using the simulated `temperature_c` and `rainfall_delta` to output the simulated `rainfall_mm`.
-   - Remaining parameters are scaled by their percentage modifiers:
-     - `soil_moisture_simulated = soil_moisture * (1 + soil_moisture_delta / 100)`
-     - `evabs_simulated = evabs * (1 + evaporation_delta / 100)`
-     - `sro_simulated = sro * (1 + runoff_delta / 100)`
-   - The updated variables are fed to the `DroughtPredictor` to predict the scenario output.
-3. **Fallback Execution**: If predictors are missing, direct mathematical modifiers are applied to variables directly before prediction.
-4. **Risk Change Calculation**: Baseline vs scenario categories are mapped to indexes (Low=0, Medium=1, High=2, Extreme=3). The category delta is displayed as a relative levels change (e.g. `+2 levels`, `No change`, `-1 level`).
+| Component | Weight | Rationale |
+|-----------|--------|-----------|
+| Rainfall SPI | 30% | Gold standard; directly measures precipitation deficit |
+| Soil Moisture Z | 25% | Most direct crop/ecosystem impact signal |
+| Temperature Z | 15% | Amplifies evapotranspiration demand |
+| Evaporation Stress | 15% | Captures atmospheric water demand |
+| Hydrological Stress | 15% | Combined soil+rain+runoff water availability |
 
 ---
 
-## 5. Water Stress Assessment Methodology
+## Drought Category Methodology
 
-- **`water_stress_index` (WSI)**: A composite physical-probabilistic index scaling from 0 to 100:
-  $$WSI = 100 \times \left( 0.3 \times (1 - \text{SM\_norm}) + 0.3 \times (1 - \text{Rain\_norm}) + 0.1 \times (1 - \text{Runoff\_norm}) + 0.3 \times \text{Drought\_probability} \right)$$
-  - $\text{SM\_norm} = \text{soil\_moisture} / 0.4$ (capped at 1.0)
-  - $\text{Rain\_norm} = \text{rainfall\_mm} / \text{rainfall\_climatology}$
-  - $\text{Runoff\_norm} = \text{sro} / 0.05$ (capped at 1.0)
-- **`reservoir_risk`**:
-  - `Critical`: Rainfall < 10.0mm, runoff (`sro`) < 0.002, and drought risk score > 0.6.
-  - `High`: Rainfall < 25.0mm, or runoff < 0.005, or drought risk score > 0.4.
-  - `Medium`: Drought risk score > 0.15.
-  - `Low`: Otherwise.
-- **`groundwater_risk`**: Evaluates soil moisture depletion streak and long term anomalies:
-  - `Critical`: Soil moisture streak $\ge$ 4 months, cumulative SM deficit $\ge$ 40%, or $Z_{\text{SM}} < -2.0$.
-  - `High`: Soil moisture streak $\ge$ 2 months, cumulative SM deficit $\ge$ 20%, or $Z_{\text{SM}} < -1.2$.
-  - `Medium`: $Z_{\text{SM}} < -0.5$ or cumulative SM deficit $\ge$ 5%.
-  - `Low`: Otherwise.
-- **`water_availability_status`**:
-  - `Deficit` (WSI > 75), `Stressed` (50 < WSI $\le$ 75), `Sufficient` (20 < WSI $\le$ 50), `Abundant` (WSI $\le$ 20).
+Categories are assigned using **city-level percentiles** of the CDSS score,
+ensuring climate-zone fairness (Desert cities evaluated against desert baseline):
 
----
+| Category | CDSS Percentile | USDM Analog |
+|----------|----------------|-------------|
+| Low | 0–30th | D0 (Abnormally Dry) |
+| Medium | 30–60th | D1–D2 (Moderate–Severe) |
+| High | 60–85th | D3 (Extreme Drought) |
+| Extreme | 85–100th | D4 (Exceptional) |
 
-## 6. Agricultural Intelligence Methodology
+### Class Distribution
+| Category | Count | % |
+|----------|-------|---|
+| Low | 4,258 | 29.9% |
+| Medium | 4,245 | 29.8% |
+| High | 3,596 | 25.3% |
+| Extreme | 2,142 | 15.0% |
 
-- **`crop_stress_index` (CSI)**: Scales from 0 to 100 based on agronomic thresholds:
-  $$CSI = 100 \times \left( 0.45 \times \text{SM\_stress\_factor} + 0.25 \times \text{Heat\_stress\_factor} + 0.30 \times \text{Drought\_probability} \right)$$
-  - $\text{SM\_stress\_factor} = \max\left(0, \min\left(1, \frac{0.30 - \text{soil\_moisture}}{0.20}\right)\right)$
-  - $\text{Heat\_stress\_factor} = \max\left(0, \min\left(1, \frac{\text{temperature\_c} - 28.0}{12.0}\right)\right)$
-- **`irrigation_need`**:
-  - `Critical`: Soil moisture < 0.10 and Temperature > 35°C.
-  - `High`: Soil moisture < 0.15 or CSI > 65.0.
-  - `Medium`: Soil moisture < 0.22 or CSI > 35.0.
-  - `Low`: Otherwise.
-- **`agricultural_risk`**:
-  - `Critical`: CSI > 75.0 or drought category is `Extreme`.
-  - `High`: CSI > 50.0 or drought category is `High`.
-  - `Medium`: CSI > 25.0 or drought category is `Medium`.
-  - `Low`: Otherwise.
+**Class Imbalance Assessment**: By design (percentile-based), distribution is
+approximately balanced across Low/Medium/High/Extreme. Extreme events are
+15% of data — minority class monitoring is advised during training.
 
 ---
 
-## 7. Early Warning Methodology
+## Feature Classification
 
-- **Triggers**:
-  - Probability of Extreme drought exceeds `0.15`.
-  - Probability of High drought exceeds `0.35`.
-  - Rapid escalation: Worsening drought momentum (`drought_momentum < -5.0`) or increasing monthly deficit (`drought_trend < -5.0`).
-- **Warning Levels**:
-  - `Critical`: Extreme Probability > 30% OR High+Extreme Probability > 70%.
-  - `High`: Extreme Probability > 15% OR High Probability > 40%.
-  - `Medium`: Medium Probability > 50% OR High Probability > 25%.
-  - `Low`: Otherwise.
-- **Message**: Actionable notifications generated dynamically based on active triggers.
+### Mandatory (Correlation ≥ 0.50)
+- `rainfall_spi`
+- `sm_zscore`
+- `rainfall_deficit_pct`
+- `sm_anomaly`
+- `zone_rain_zscore`
+- `rainfall_deficit`
+- `temperature_zscore`
+- `sm_deficit_pct`
+- `sm_deficit`
+- `moisture_stress`
+- `temperature_anomaly`
+- `zone_sm_zscore`
+- `hydrological_stress`
+- `water_availability_index`
+- `zone_rain_deficit`
+- `rainfall_mm`
 
----
+### Useful (0.20 ≤ Correlation < 0.50)
+- `zone_sm_deficit`
+- `sm_zone_anomaly`
+- `rainfall_runoff_ratio`
+- `soil_moisture`
+- `evaporation_pressure`
+- `compound_drought_stress`
+- `evaporation_stress`
+- `drought_recovery`
+- `sro`
+- `rolling_rainfall_3m`
+- `runoff_efficiency`
+- `rainfall_prev_1`
+- `soil_moisture_prev_1`
+- `rainfall_climatology`
+- `rolling_rainfall_6m`
+- `temperature_stress`
 
-## 8. Confidence Estimation Methodology
-
-For all model inferences, the confidence score and level are derived from LightGBM class probabilities:
-- **`confidence_score`**: $\max(\{P(\text{Low}), P(\text{Medium}), P(\text{High}), P(\text{Extreme})\})$
-- **`confidence_level`**:
-  - `High` if $\text{confidence\_score} \ge 0.85$
-  - `Medium` if $0.65 \le \text{confidence\_score} < 0.85$
-  - `Low` if $\text{confidence\_score} < 0.65$
-
----
-
-## 9. Example Request and Response
-
-### Example POST `/api/v1/drought/twin-state`
-
-#### Request Payload
-```json
-{
-  "latitude": 28.61,
-  "longitude": 77.20,
-  "year": 2030,
-  "month": 5,
-  "temperature_c": 42.5,
-  "rainfall_mm": 2.0,
-  "soil_moisture": 0.08,
-  "evabs": -0.005,
-  "sro": 0.000,
-  "temperature_delta": 2.0,
-  "rainfall_delta": -20.0,
-  "soil_moisture_delta": -15.0,
-  "evaporation_delta": 10.0,
-  "runoff_delta": -5.0,
-  "climate_zone": "Indo-Gangetic Plains"
-}
-```
-
-#### Response Payload
-```json
-{
-  "drought_prediction": {
-    "drought_category": "Low",
-    "severity_score": 0.015,
-    "drought_risk_score": 0.015,
-    "confidence_score": 0.81,
-    "confidence_level": "Medium",
-    "probabilities": {
-      "Low": 0.81,
-      "Medium": 0.175,
-      "High": 0.008,
-      "Extreme": 0.007
-    }
-  },
-  "scenario_analysis": {
-    "baseline_category": "Low",
-    "baseline_score": 0.017,
-    "scenario_category": "Low",
-    "scenario_score": 0.006,
-    "risk_change": "No change"
-  },
-  "drivers": {
-    "top_drivers": [
-      "High Temperature Anomaly",
-      "Low Soil Moisture",
-      "Rainfall Deficit"
-    ]
-  },
-  "water_intelligence": {
-    "water_stress_index": 63.0,
-    "reservoir_risk": "High",
-    "groundwater_risk": "Critical",
-    "water_availability_status": "Stressed"
-  },
-  "agriculture_intelligence": {
-    "crop_stress_index": 70.4,
-    "irrigation_need": "Critical",
-    "agricultural_risk": "High"
-  },
-  "early_warning": {
-    "warning": false,
-    "warning_level": "Low",
-    "message": "Drought severity is rapidly increasing due to accumulating water deficits."
-  }
-}
-```
+### Experimental (Correlation < 0.20)
+- `rolling_sm_3m`
+- `cumulative_sm_deficit_3m`
+- `rainfall_deficit_lag1`
+- `deficit_streak`
+- `sm_trend`
+- `water_balance`
+- `temperature_c`
+- `cumulative_deficit_3m`
+- `cumulative_sm_deficit_6m`
+- `month_sin`
+- `rolling_sm_6m`
+- `cumulative_deficit_6m`
+- `deficit_volatility_3m`
+- `zone_aridity_index`
+- `rainfall_evap_ratio`
+- `month_cos`
+- `low_sm_streak`
+- `rolling_temp_3m`
+- `longitude`
+- `drought_momentum`
 
 ---
 
-## 10. Deployment Recommendations
+## Top 20 Drought Predictors
 
-1. **Singleton Pattern for ML Services**: Instantiate the `DroughtPredictor` service once at FastAPI application startup to avoid loading 17MB model files on every request.
-2. **Batch Prediction Optimization**: Expose `/predict/batch` endpoint to run large-scale spatial simulations efficiently, taking advantage of vectorization in `pandas` and `lightgbm` prediction loops.
-3. **Data Caching**: Regional climatologies and historical averages should be cached by latitude/longitude/month in memory (e.g. Redis) so that client integrations do not need to query database observations repeatedly.
-4. **Monitoring and Logging**: Track distribution drift of predictions over time. Low confidence levels (probability < 0.65) should trigger logging alerts for data quality auditing.
+| Rank | Feature | |Corr with CDSS| |
+|------|---------|----------------|
+| 1 | rainfall_spi | 0.8562 |
+| 2 | sm_zscore | 0.8257 |
+| 3 | rainfall_deficit_pct | 0.7884 |
+| 4 | sm_anomaly | 0.7561 |
+| 5 | zone_rain_zscore | 0.7226 |
+| 6 | rainfall_deficit | 0.6585 |
+| 7 | temperature_zscore | 0.6404 |
+| 8 | sm_deficit_pct | 0.6123 |
+| 9 | sm_deficit | 0.6029 |
+| 10 | moisture_stress | 0.5962 |
+| 11 | temperature_anomaly | 0.5925 |
+| 12 | zone_sm_zscore | 0.5265 |
+| 13 | hydrological_stress | 0.5233 |
+| 14 | water_availability_index | 0.5233 |
+| 15 | zone_rain_deficit | 0.5227 |
+| 16 | rainfall_mm | 0.5140 |
+| 17 | zone_sm_deficit | 0.4894 |
+| 18 | sm_zone_anomaly | 0.4894 |
+| 19 | rainfall_runoff_ratio | 0.4776 |
+| 20 | soil_moisture | 0.4627 |
+
+---
+
+## Climate Zone Observations
+
+### Zone-level Mean Rainfall & Soil Moisture
+                            rainfall_mm  soil_moisture
+climate_zone                                          
+Central Plateau Region            3.065          0.297
+Eastern Coastal Region            4.019          0.239
+Himalayan Region                  5.580          0.310
+Indo-Gangetic Plains              2.478          0.228
+North-East Region                 6.185          0.392
+Southern Peninsular Region        2.575          0.255
+Thar Desert Region                0.870          0.128
+Western Coastal Region            6.032          0.259
+Western Ghats Region              6.896          0.336
+
+Key observations:
+- **Thar Desert Region**: Extremely low baseline rainfall — drought is the norm.
+  Zone-relative features are essential to detect anomalous wet/dry spells.
+- **North-East Region**: Highest baseline rainfall; droughts are rare but severe.
+  SPI-based anomalies perform best here.
+- **Western Ghats**: Orographic rainfall; strong spatial gradient.
+  City-level climatology is more relevant than zone-level.
+- **Indo-Gangetic Plains**: Monsoon-dependent; consecutive dry months
+  are the strongest drought signal.
+
+---
+
+## Drought Evolution Analysis
+
+Key patterns observed:
+- `drought_momentum` captures whether drought is deepening or recovering.
+- `cumulative_deficit_6m` is the strongest compound indicator.
+- `low_sm_streak` shows that soil moisture impacts persist for 1–2 months after rainfall.
+- `deficit_streak` consistently identifies prolonged droughts early.
+
+---
+
+## Leakage Prevention
+
+| Column | Reason Removed |
+|--------|----------------|
+| `drought_risk` | Pre-existing post-hoc label — circular dependency |
+| `heatwave_risk` | Derived from temperature labels |
+| `climate_risk_score` | Composite of post-hoc derived labels |
+| `target_rainfall_next_month` | Future value |
+| `target_temperature_next_month` | Future value |
+
+---
+
+## Recommended Modeling Strategy
+
+1. **Primary Target**: `drought_category` (multi-class: Low/Medium/High/Extreme)
+2. **Auxiliary Regression Target**: `drought_severity_score` (continuous 0–1)
+3. **Split**: Chronological — Train ≤ 2020, Val 2021–2022, Test ≥ 2023
+4. **Algorithm**: LightGBM (handles ordinal targets well) or XGBoost
+5. **Class Weighting**: Apply `class_weight='balanced'` or `scale_pos_weight` for Extreme class
+6. **Feature Selection**: Start with Mandatory + Useful features; use SHAP for interpretability
+7. **Evaluation**: F1-macro (balanced across all drought levels), Confusion Matrix by zone

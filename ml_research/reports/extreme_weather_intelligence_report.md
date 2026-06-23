@@ -1,337 +1,281 @@
-# Extreme Weather Intelligence Subsystem: Production Architecture & Methodology Report
+# Extreme Weather Intelligence Report
 ## AI Climate Digital Twin of India
 
-This report details the production-ready **Extreme Weather Intelligence Subsystem** integrated into the Climate Digital Twin platform of India. It covers the system architecture, inference service logic, combined risk aggregation, scenario simulation workflows, early warning priorities, public-health/hydrological impacts, and FastAPI endpoints.
+---
+
+## 1. Dataset Overview
+
+- **Total Rows**: 14,382
+- **Total Columns**: 83
+- **Cities**: 47
+- **Climate Zones**: 9
+- **Year Range**: 2000 – 2025
+- **Heatwave Features Engineered**: 20
+- **Extreme Rainfall Features Engineered**: 25
+- **Missing Values**: 235
+
+### Heatwave Category Distribution
+| Category | Count | % |
+|----------|-------|---|
+| Low | 7,191 | 50.0% |
+| Medium | 3,572 | 24.8% |
+| High | 2,162 | 15.0% |
+| Extreme | 1,457 | 10.1% |
+
+### Extreme Rainfall Category Distribution
+| Category | Count | % |
+|----------|-------|---|
+| Low | 7,191 | 50.0% |
+| Medium | 3,572 | 24.8% |
+| High | 2,162 | 15.0% |
+| Extreme | 1,457 | 10.1% |
 
 ---
 
-## 1. System Architecture
+## 2. Feature Engineering Methodology
 
-The Extreme Weather Intelligence Layer is built as a modular service sitting on top of four serialized Machine Learning models:
-- **Heatwave Classifier** (`heatwave.pkl` - XGBoost)
-- **Extreme Rainfall Classifier** (`extreme_rainfall.pkl` - LightGBM)
-- **Heatwave Severity Regressor** (`heatwave_severity.pkl` - LightGBM)
-- **Extreme Rainfall Severity Regressor** (`extreme_rainfall_severity.pkl` - XGBoost)
-
-In addition, it chains with the existing serialized models (**TemperaturePredictor** and **RainfallPredictor**) to form a cascading Climate Digital Twin.
-
-### Chained Simulation Pipeline Flow
-```mermaid
-graph TD
-    subgraph Inputs ["1. Inputs & Scenario Deltas"]
-        RawState["Baseline Climate State<br>(temp, rain, soil moisture, evap, runoff)"]
-        Deltas["Scenario Deltas<br>(temp_delta, rain_delta, sm_delta, evap_delta, ro_delta)"]
-    end
-
-    subgraph Chaining ["2. Chained Digital Twin Workflow"]
-        TempPredictor["TemperaturePredictor<br>(Predicts temperature_c + temp_delta)"]
-        RainPredictor["RainfallPredictor<br>(Predicts rainfall_mm using updated temp)"]
-        StateScale["Scale Other Variables<br>(sm, evap, runoff scaled by %)"]
-    end
-
-    subgraph Fallback ["3. Direct Fallback"]
-        DirectDelta["Direct Modifier Math<br>(Adds temp_delta, scales rain/sm/evap/ro by %)"]
-    end
-
-    subgraph Inference ["4. Extreme Weather Predictors"]
-        PrepFeatures["Reconstruct Engineered Features<br>(40 Heatwave & 45 Rainfall Features)"]
-        HWClf["Heatwave Classifier<br>(XGBoost)"]
-        ERClf["Rainfall Classifier<br>(LightGBM)"]
-        HWReg["Heatwave Regressor<br>(LightGBM)"]
-        ERReg["Rainfall Regressor<br>(XGBoost)"]
-    end
-
-    subgraph Output ["5. Integrated Intelligence Layer"]
-        OverallRisk["Combined Risk Layer<br>(Category, Risk Score 0-100)"]
-        Drivers["Driver Analysis<br>(Feature-weighted anomalies)"]
-        Impact["Impact Advisories<br>(Health, Flood, Drainage, Alert levels)"]
-        EarlyWarn["Early Warning Alerts<br>(Critical, High, Medium, Low warnings)"]
-    end
-
-    RawState --> TempPredictor
-    Deltas --> TempPredictor
-    TempPredictor --> RainPredictor
-    RainPredictor --> StateScale
-    StateScale --> PrepFeatures
-    
-    RawState -.->|Predictors Missing| Fallback
-    Deltas -.->|Predictors Missing| Fallback
-    Fallback --> PrepFeatures
-    
-    PrepFeatures --> HWClf
-    PrepFeatures --> ERClf
-    PrepFeatures --> HWReg
-    PrepFeatures --> ERReg
-    
-    HWClf & ERClf & HWReg & ERReg --> OverallRisk
-    HWClf & ERClf & HWReg & ERReg --> Drivers
-    HWClf & ERClf & HWReg & ERReg --> Impact
-    HWClf & ERClf & HWReg & ERReg --> EarlyWarn
-```
+### Climatology Baselines
+All anomaly and z-score features are computed relative to **city × month** climatology baselines,
+computed from the full historical record (2000–2025).
+This ensures:
+- Seasonal cycles are correctly removed
+- Zone-relative extremes are captured (40°C in desert ≠ 40°C in northeast)
+- No future leakage (baselines are pre-computed from full history)
 
 ---
 
-## 2. Input & Output Schemas
+## 3. Heatwave Severity Score Formula
 
-### Inference Input Parameter Requirements
-The API accepts a comprehensive snapshot of climate variables, coordinates, historical baselines, and scenario deltas:
-
-| Parameter | Type | Default | Description |
-|---|---|---|---|
-| **latitude** | `float` | `20.0` | coordinate latitude |
-| **longitude** | `float` | `80.0` | coordinate longitude |
-| **year** | `int` | `2024` | Target year |
-| **month** | `int` | `6` | Target month (1-12) |
-| **temperature_c** | `float` | `30.0` | Baseline monthly temperature in Celsius |
-| **rainfall_mm** | `float` | `10.0` | Baseline monthly rainfall in mm |
-| **soil_moisture** | `float` | `0.2` | Baseline soil moisture index (0.0 to 1.0) |
-| **evabs** | `float` | `-0.001` | Evaporation flux (negative value) |
-| **sro** | `float` | `0.001` | Surface runoff in mm |
-| **temperature_prev_1** | `float` | `29.0` | Preceding month's temperature |
-| **temperature_prev_3** | `float` | `28.0` | Month t-3 temperature |
-| **rainfall_prev_1** | `float` | `5.0` | Preceding month's rainfall |
-| **rainfall_prev_3** | `float` | `2.0` | Month t-3 rainfall |
-| **soil_moisture_prev_1** | `float` | `0.18` | Preceding month's soil moisture |
-| **rolling_temp_3m** | `float` | `28.5` | 3-month rolling mean temperature |
-| **rolling_rainfall_3m** | `float` | `15.0` | 3-month rolling mean rainfall |
-| **rolling_temp_6m** | `float` | `25.0` | 6-month rolling mean temperature |
-| **rolling_rainfall_6m** | `float` | `30.0` | 6-month rolling mean rainfall |
-| **temp_climo_mean** | `float` | `28.0` | historical mean temperature |
-| **temp_climo_std** | `float` | `2.0` | historical std temperature |
-| **rain_climo_mean** | `float` | `12.0` | historical mean rainfall |
-| **rain_climo_std** | `float` | `5.0` | historical std rainfall |
-| **sm_climo_mean** | `float` | `0.25` | historical mean soil moisture |
-| **sm_climo_std** | `float` | `0.05` | historical std soil moisture |
-| **zone_temp_mean** | `float` | `28.0` | Climate zone average temperature |
-| **zone_temp_std** | `float` | `2.0` | Climate zone std temperature |
-| **zone_rain_mean** | `float` | `12.0` | Climate zone average rainfall |
-| **zone_rain_std** | `float` | `5.0` | Climate zone std rainfall |
-| **seasonal_temp_mean** | `float` | `28.0` | Seasonal (India-wide) average temperature |
-| **seasonal_rain_mean** | `float` | `12.0` | Seasonal (India-wide) average rainfall |
-| **consecutive_hot_months** | `float` | `0.0` | Preceding hot months streak |
-| **consecutive_wet_months** | `float` | `0.0` | Preceding wet months streak |
-| **temperature_delta** | `float` | `0.0` | Temperature delta modifier (°C) |
-| **rainfall_delta** | `float` | `0.0` | Rainfall percentage modifier (%) |
-| **soil_moisture_delta** | `float` | `0.0` | Soil moisture percentage modifier (%) |
-| **evaporation_delta** | `float` | `0.0` | Evaporation percentage modifier (%) |
-| **runoff_delta** | `float` | `0.0` | Runoff percentage modifier (%) |
-| **climate_zone** | `str` | `"Indo-Gangetic Plains"` | Climate zone name |
+```
+heatwave_severity_score = (
+    0.35 × norm(temperature_anomaly, positive only)  # Primary heat signal
+  + 0.25 × norm(heat_stress)                         # Anomaly × rainfall absence
+  + 0.15 × norm(soil_moisture_deficit)               # Dryness amplifier
+  + 0.15 × norm(rainfall_deficit)                    # Co-occurring drought
+  + 0.10 × norm(evaporation_pressure)                # Atmospheric demand
+)
+```
+Each component is individually min-max normalized over the full dataset before weighting,
+ensuring no single variable dominates by scale.
 
 ---
 
-## 3. Scientific Methodologies
+## 4. Extreme Rainfall Severity Score Formula
 
-### 1. Combined Extreme Weather Risk Layer
-The overall risk score merges Heatwave and Extreme Rainfall severities using a Max-dominant formulation with a compound event penalty:
-
-$$OverallRiskScore = \max(Score_{HW}, Score_{ER}) \times 0.8 + \text{mean}(Score_{HW}, Score_{ER}) \times 0.2$$
-
-*   **Compound Event Penalty**: If both the Heatwave severe probability ($P(\text{High}) + P(\text{Extreme})$) and Extreme Rainfall severe probability cross $35\%$, a compound hazard penalty of $+10.0$ is added.
-*   **Qualitative Classes**:
-    *   `Low`: $Score < 35$
-    *   `Medium`: $35 \le Score < 60$
-    *   `High`: $60 \le Score < 80$
-    *   `Extreme`: $Score \ge 80$
-
-### 2. Scenario Simulation & Chaining
-When a scenario simulation request is received:
-1.  **Baseline State**: Deltas are forced to `0.0`. Predictions calculate standard base categories and risk scores.
-2.  **Simulation Workflow**: If predictors are available, temperature and rainfall are forecasted in sequence. Scaled soil moisture ($1 + \Delta_{SM}/100$), evaporation ($1 + \Delta_{EVAP}/100$), and runoff ($1 + \Delta_{RO}/100$) are combined. If predictors are absent, variables are modified directly using mathematical scaling deltas.
-3.  **Risk Change**: Outputs the relative category levels difference (e.g. `+2 levels`, `No change`, `-1 level`).
-
-### 3. Public Health & Hydrological Impact Advisories
-*   **Heatwave Impact**: 
-    *   `health_risk` is determined from severity and temperature anomaly.
-    *   `outdoor_exposure_risk` assesses safety limits for outdoor laborers and activities.
-    *   `heat_alert_level` maps to Color Codes: **Green** (Low), **Yellow** (Medium), **Orange** (High), and **Red** (Extreme).
-    *   Generates clear recommendations (e.g. "Stay hydrated, avoid direct sun between 11:00 AM and 4:00 PM").
-*   **Rainfall Impact**:
-    *   `flash_flood_risk` combines rainfall severity, soil saturation, and runoff pressure.
-    *   `surface_runoff_risk` tracks water flow hazards.
-    *   `drainage_overload_risk` monitors storm drainage capacities.
-    *   Generates actionable flood recommendations.
-
-### 4. Driver Analysis
-Combines local feature anomalies with model Gini feature importance weights.
-*   **Heatwave Drivers**: Evaluates `hw_temperature_anomaly`, `hw_heat_stress`, soil moisture deficit (`sm_climo_mean - soil_moisture`), and rainfall deficit (`rain_climo_mean - rainfall_mm`).
-*   **Rainfall Drivers**: Evaluates `er_rainfall_anomaly`, `er_runoff_pressure`, `er_soil_saturation`, and `er_rainfall_intensity`.
-*   Ranks contribution scores to find the top three active drivers.
-
-### 5. Early Warning Alerts
-Fires warning tiers based on the class probabilities:
-*   **Tiers**: `Low`, `Medium`, `High`, `Critical`.
-*   **Combined Warning**: Triggers when either Heatwave or Rainfall warning level is $\ge$ `Medium`. The message is dynamically constructed to describe compound hazards or individual peaks.
-
----
-
-## 4. FastAPI Endpoints & Payload Examples
-
-### 1. Single State Prediction: `POST /api/v1/extreme-weather/predict`
-#### Request Payload
-```json
-{
-  "latitude": 28.61,
-  "longitude": 77.20,
-  "year": 2024,
-  "month": 7,
-  "temperature_c": 41.5,
-  "rainfall_mm": 240.0,
-  "soil_moisture": 0.40,
-  "evabs": -0.005,
-  "sro": 0.040,
-  "temperature_prev_1": 40.0,
-  "temperature_prev_3": 38.0,
-  "rainfall_prev_1": 150.0,
-  "rainfall_prev_3": 100.0,
-  "soil_moisture_prev_1": 0.38,
-  "rolling_temp_3m": 39.5,
-  "rolling_rainfall_3m": 120.0,
-  "rolling_temp_6m": 35.0,
-  "rolling_rainfall_6m": 90.0,
-  "temp_climo_mean": 38.0,
-  "temp_climo_std": 2.0,
-  "rain_climo_mean": 180.0,
-  "rain_climo_std": 30.0,
-  "sm_climo_mean": 0.35,
-  "sm_climo_std": 0.05,
-  "zone_temp_mean": 38.0,
-  "zone_temp_std": 2.0,
-  "zone_rain_mean": 180.0,
-  "zone_rain_std": 30.0,
-  "seasonal_temp_mean": 38.0,
-  "seasonal_rain_mean": 180.0,
-  "consecutive_hot_months": 2.0,
-  "consecutive_wet_months": 3.0,
-  "climate_zone": "Indo-Gangetic Plains"
-}
 ```
-
-#### Response Payload
-```json
-{
-  "heatwave": {
-    "category": "Extreme",
-    "severity": 27.3,
-    "confidence": 0.822
-  },
-  "extreme_rainfall": {
-    "category": "Extreme",
-    "severity": 62.5,
-    "confidence": 1.0
-  }
-}
-```
-
-### 2. Scenario Simulation: `POST /api/v1/extreme-weather/simulate`
-#### Request Payload (with deltas)
-```json
-{
-  "latitude": 28.61,
-  "longitude": 77.20,
-  "year": 2024,
-  "month": 7,
-  "temperature_c": 41.5,
-  "rainfall_mm": 240.0,
-  "soil_moisture": 0.40,
-  "evabs": -0.005,
-  "sro": 0.040,
-  "temp_climo_mean": 38.0,
-  "temp_climo_std": 2.0,
-  "rain_climo_mean": 180.0,
-  "rain_climo_std": 30.0,
-  "sm_climo_mean": 0.35,
-  "sm_climo_std": 0.05,
-  "zone_temp_mean": 38.0,
-  "zone_temp_std": 2.0,
-  "zone_rain_mean": 180.0,
-  "zone_rain_std": 30.0,
-  "seasonal_temp_mean": 38.0,
-  "seasonal_rain_mean": 180.0,
-  "temperature_delta": 2.0,
-  "rainfall_delta": 20.0,
-  "soil_moisture_delta": 10.0,
-  "evaporation_delta": 5.0,
-  "runoff_delta": 15.0,
-  "climate_zone": "Indo-Gangetic Plains"
-}
-```
-
-#### Response Payload
-```json
-{
-  "baseline_risk": "High",
-  "baseline_score": 64.6,
-  "scenario_risk": "Low",
-  "scenario_score": 18.1,
-  "risk_change": "-2 levels"
-}
-```
-
-### 3. Unified Twin State: `POST /api/v1/extreme-weather/twin-state`
-#### Response Payload
-```json
-{
-  "heatwave_prediction": {
-    "category": "Extreme",
-    "severity": 27.3,
-    "confidence": 0.822
-  },
-  "rainfall_extreme_prediction": {
-    "category": "Extreme",
-    "severity": 62.5,
-    "confidence": 1.0
-  },
-  "overall_extreme_weather": {
-    "overall_extreme_weather_risk": "High",
-    "overall_risk_score": 69.0
-  },
-  "scenario_analysis": {
-    "baseline_risk": "High",
-    "baseline_score": 64.6,
-    "scenario_risk": "Low",
-    "scenario_score": 18.1,
-    "risk_change": "-2 levels"
-  },
-  "driver_analysis": {
-    "top_drivers": [
-      "Intense Daily Precipitation",
-      "Rainfall Anomaly Surge",
-      "High Soil Saturation"
-    ]
-  },
-  "impact_assessment": {
-    "heatwave_impact": {
-      "health_risk": "Extreme",
-      "outdoor_exposure_risk": "High",
-      "heat_alert_level": "Red",
-      "recommendations": [
-        "RED ALERT: Extreme hazard. Avoid all outdoor exposures. Keep room ventilation active.",
-        "Monitor high-risk individuals (elderly, children) for signs of heatstroke."
-      ]
-    },
-    "rainfall_impact": {
-      "flash_flood_risk": "High",
-      "surface_runoff_risk": "High",
-      "drainage_overload_risk": "High",
-      "recommendations": [
-        "CRITICAL: Extreme flood alert. Evacuate low-lying zones immediately.",
-        "Do NOT attempt to cross flooded roadways or waterlogged bridges."
-      ]
-    }
-  },
-  "early_warning": {
-    "warning": true,
-    "warning_level": "Critical",
-    "event_type": "Compound Heat-Rainfall",
-    "message": "Compound Heat & Flood hazard warning active. High stress levels detected."
-  }
-}
+extreme_rainfall_score = (
+    0.35 × norm(rainfall_anomaly, positive only)     # Primary rain signal
+  + 0.25 × norm(rainfall_intensity)                  # Daily rate pressure
+  + 0.20 × norm(runoff_pressure)                     # Flood potential
+  + 0.10 × norm(soil_saturation)                     # Saturation amplifier
+  + 0.10 × norm(rainfall_acceleration, positive)     # Rapid onset
+)
 ```
 
 ---
 
-## 5. Deployment Notes
+## 5. Category Labeling Methodology
 
-1.  **Model Cache Initialization**: Load the `ExtremeWeatherPredictor` as a singleton class on FastAPI startup (integrated in `app/routers/extreme_weather.py`) to prevent loading and unloading joblib weights on every request.
-2.  **Stateless Feature Engineering**: Anomaly equations and Steadman heat index indices are calculated on the fly, avoiding database state calls during inference.
-3.  **Digital Twin Cascading Fallback**: Ensure the Temperature and Rainfall predictor models are located in the models directory so that the chained pipeline can dynamically update inputs, falling back to direct delta scaling math if the underlying predictors are unavailable.
+**Both heatwave and extreme rainfall categories use city-level percentile thresholds.**
+City-level percentiles ensure climate-zone fairness:
+| Category | Severity Score Percentile | Description |
+|----------|--------------------------|-------------|
+| Low      | 0 – 50th                 | Routine conditions |
+| Medium   | 50th – 75th              | Notable event |
+| High     | 75th – 90th              | Significant event |
+| Extreme  | 90th – 100th             | Exceptional event |
+
+---
+
+## 6. Climate Zone Observations
+
+### Heatwave Risk by Climate Zone
+| Climate Zone | Mean HW Score | Extreme HW % |
+|---|---|---|
+| Indo-Gangetic Plains | 0.0965 | 10.1% |
+| Central Plateau Region | 0.0946 | 10.1% |
+| Southern Peninsular Region | 0.0851 | 10.1% |
+| Eastern Coastal Region | 0.0848 | 10.1% |
+| Himalayan Region | 0.0799 | 10.1% |
+| Western Coastal Region | 0.0724 | 10.1% |
+| North-East Region | 0.0716 | 10.1% |
+| Thar Desert Region | 0.0703 | 10.1% |
+| Western Ghats Region | 0.0655 | 10.1% |
+
+### Extreme Rainfall Risk by Climate Zone
+| Climate Zone | Mean ER Score | Extreme ER % |
+|---|---|---|
+| North-East Region | 0.1374 | 10.1% |
+| Western Ghats Region | 0.1313 | 10.1% |
+| Himalayan Region | 0.1190 | 10.1% |
+| Western Coastal Region | 0.1076 | 10.1% |
+| Central Plateau Region | 0.0938 | 10.1% |
+| Eastern Coastal Region | 0.0875 | 10.1% |
+| Southern Peninsular Region | 0.0782 | 10.1% |
+| Indo-Gangetic Plains | 0.0719 | 10.1% |
+| Thar Desert Region | 0.0328 | 10.1% |
+
+### Peak Heatwave Months (India-wide)
+| Month | Mean HW Score |
+|-------|---------------|
+| Feb | 0.1003 |
+| Nov | 0.1002 |
+| Mar | 0.0954 |
+| Jan | 0.0908 |
+| Oct | 0.0907 |
+| Dec | 0.0891 |
+| Apr | 0.0853 |
+| May | 0.0757 |
+| Jun | 0.0749 |
+| Sep | 0.0678 |
+| Jul | 0.0579 |
+| Aug | 0.0525 |
+
+### Peak Extreme Rainfall Months (India-wide)
+| Month | Mean ER Score |
+|-------|---------------|
+| Jul | 0.1602 |
+| Aug | 0.1493 |
+| Sep | 0.1255 |
+| Jun | 0.1245 |
+| Oct | 0.0950 |
+| May | 0.0827 |
+| Nov | 0.0750 |
+| Dec | 0.0685 |
+| Apr | 0.0643 |
+| Jan | 0.0628 |
+| Feb | 0.0590 |
+| Mar | 0.0579 |
+
+---
+
+## 7. Strongest Predictors
+
+### Heatwave — Top 15 Features by Correlation with Severity Score
+| Rank | Feature | |Corr with Score| |
+|------|---------|----------------|
+| 1 | hw_rainfall_heat_interaction | 0.8373 |
+| 2 | hw_heat_stress | 0.7877 |
+| 3 | hw_heatwave_intensity | 0.7495 |
+| 4 | hw_temperature_anomaly | 0.7483 |
+| 5 | hw_soil_heat_interaction | 0.7361 |
+| 6 | hw_temperature_zscore | 0.7065 |
+| 7 | hw_compound_heat_drought | 0.7041 |
+| 8 | hw_apparent_temp_anomaly | 0.4290 |
+| 9 | hw_zone_temp_zscore | 0.3712 |
+| 10 | hw_climate_zone_heat_anomaly | 0.1908 |
+| 11 | hw_seasonal_heat_deviation | 0.1587 |
+| 12 | hw_rolling_heat_3m | 0.1495 |
+| 13 | hw_rolling_heat_6m | 0.1125 |
+| 14 | hw_heat_acceleration | 0.0986 |
+| 15 | hw_heat_excess | 0.0945 |
+
+### Extreme Rainfall — Top 15 Features by Correlation with Severity Score
+| Rank | Feature | |Corr with Score| |
+|------|---------|----------------|
+| 1 | er_rainfall_intensity | 0.9052 |
+| 2 | er_seasonal_rainfall_deviation | 0.7809 |
+| 3 | er_soil_saturation | 0.7579 |
+| 4 | er_runoff_response | 0.7217 |
+| 5 | er_flood_potential_proxy | 0.7112 |
+| 6 | er_zone_rainfall_anomaly | 0.6383 |
+| 7 | er_evaporation_demand_ratio | 0.6382 |
+| 8 | er_compound_rainfall_saturation | 0.6266 |
+| 9 | er_rainfall_momentum | 0.6264 |
+| 10 | er_rainfall_anomaly | 0.5753 |
+| 11 | er_zone_rainfall_zscore | 0.5660 |
+| 12 | er_antecedent_soil_moisture | 0.5642 |
+| 13 | er_rainfall_surge | 0.4907 |
+| 14 | er_rainfall_zscore | 0.4692 |
+| 15 | er_extreme_precipitation_index | 0.4647 |
+
+
+---
+
+## 8. Feature Classification
+
+### Heatwave Features
+**Mandatory** (|corr| ≥ 0.40):
+- `hw_rainfall_heat_interaction`
+- `hw_heat_stress`
+- `hw_heatwave_intensity`
+- `hw_temperature_anomaly`
+- `hw_soil_heat_interaction`
+- `hw_temperature_zscore`
+- `hw_compound_heat_drought`
+- `hw_apparent_temp_anomaly`
+
+**Useful** (0.20 ≤ |corr| < 0.40):
+- `hw_zone_temp_zscore`
+
+**Experimental** (|corr| < 0.20):
+- `hw_climate_zone_heat_anomaly`
+- `hw_seasonal_heat_deviation`
+- `hw_rolling_heat_3m`
+- `hw_rolling_heat_6m`
+- `hw_heat_acceleration`
+- `hw_heat_excess`
+- `hw_dry_heat_indicator`
+- `hw_consecutive_hot_months`
+- `hw_apparent_temperature`
+- `hw_evaporation_heat_ratio`
+- `hw_rolling_temp_trend_3m`
+
+### Extreme Rainfall Features
+**Mandatory** (|corr| ≥ 0.40):
+- `er_rainfall_intensity`
+- `er_seasonal_rainfall_deviation`
+- `er_soil_saturation`
+- `er_runoff_response`
+- `er_flood_potential_proxy`
+- `er_zone_rainfall_anomaly`
+- `er_evaporation_demand_ratio`
+- `er_compound_rainfall_saturation`
+- `er_rainfall_momentum`
+- `er_rainfall_anomaly`
+- `er_zone_rainfall_zscore`
+- `er_antecedent_soil_moisture`
+- `er_rainfall_surge`
+- `er_rainfall_zscore`
+- `er_extreme_precipitation_index`
+- `er_cumulative_rain_3m`
+- `er_is_monsoon`
+- `er_monsoon_phase_factor`
+
+**Useful** (0.20 ≤ |corr| < 0.40):
+- `er_runoff_pressure`
+- `er_cumulative_rain_6m`
+
+**Experimental** (|corr| < 0.20):
+- `er_rainfall_variability_3m`
+- `er_rainfall_variability_6m`
+- `er_rainfall_acceleration`
+- `er_water_surplus`
+- `er_consecutive_wet_months`
+
+
+---
+
+## 9. Leakage Prevention Report
+
+The following columns were identified as future-information or post-hoc labels and **removed**:
+- `target_temperature_next_month`
+- `target_rainfall_next_month`
+- `drought_risk`
+- `heatwave_risk`
+- `climate_risk_score`
+
+**Verification**: No `target_`, `next_month`, or post-hoc label columns remain in the final dataset.
+
+---
+
+## 10. Recommendations for Phase 2 Model Training
+
+1. **Primary Task**: Multi-class classification for `heatwave_category` and `extreme_rainfall_category`.
+2. **Secondary Task**: Regression on `heatwave_severity_score` and `extreme_rainfall_score` for continuous risk output.
+3. **Chronological Split**: Train ≤ 2020 | Validation 2021–2022 | Test ≥ 2023 (avoids temporal leakage).
+4. **Algorithm**: LightGBM or XGBoost (proven on prior temperature, rainfall, drought models).
+5. **Class Weighting**: Apply `class_weight='balanced'` for the Extreme class (10% minority).
+6. **Evaluation Metrics**: F1-Macro, Confusion Matrix by climate zone, ROC-AUC for Extreme class.
+7. **Feature Selection**: Begin with Mandatory + Useful features; conduct SHAP analysis post-training.
+8. **Compound Events**: Consider multi-label joint prediction for simultaneous heatwave + extreme rainfall.

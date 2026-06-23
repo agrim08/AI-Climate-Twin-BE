@@ -215,20 +215,7 @@ def get_candidate_models() -> Dict[str, Any]:
         "LightGBM": lgb.LGBMRegressor(
             n_estimators=800, learning_rate=0.05, num_leaves=63,
             max_depth=8, subsample=0.8, colsample_bytree=0.8,
-            random_state=42, n_jobs=-1, verbose=-1,
-        ),
-        "XGBoost": xgb.XGBRegressor(
-            n_estimators=800, learning_rate=0.05, max_depth=8,
-            subsample=0.8, colsample_bytree=0.8,
-            random_state=42, n_jobs=-1, verbosity=0,
-        ),
-        "RandomForest": RandomForestRegressor(
-            n_estimators=300, max_depth=16, min_samples_leaf=3,
-            random_state=42, n_jobs=-1,
-        ),
-        "ExtraTrees": ExtraTreesRegressor(
-            n_estimators=300, max_depth=16, min_samples_leaf=3,
-            random_state=42, n_jobs=-1,
+            random_state=42, n_jobs=1, verbose=-1,
         ),
     }
 
@@ -355,7 +342,7 @@ def tune_best_model(
         scoring="neg_root_mean_squared_error",
         cv=cv,
         random_state=42,
-        n_jobs=-1,
+        n_jobs=1,
         verbose=1,
         refit=True,
     )

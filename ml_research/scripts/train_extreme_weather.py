@@ -351,7 +351,7 @@ def optimize_hyperparameters(
 
     search = RandomizedSearchCV(
         base, grid, n_iter=n_iter, cv=3, scoring="f1_macro",
-        n_jobs=-1, random_state=42, refit=True, verbose=0
+        n_jobs=1, random_state=42, refit=True, verbose=0
     )
 
     t0 = time.time()

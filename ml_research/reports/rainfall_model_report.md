@@ -34,10 +34,7 @@ latitude, longitude, year, month, temperature_c, soil_moisture, evabs, sro, mont
 
 | Model | MAE | RMSE | R² | MAPE | Train(s) | Infer(ms) |
 |-------|-----|------|-----|------|----------|-----------|
-| LightGBM | 0.4984 | 1.0495 | 0.9671 | 138.0566 | 3.03 | 43.86 |
-| XGBoost | 0.5045 | 1.053 | 0.9669 | 81.5796 | 9.8 | 26.97 |
-| RandomForest | 0.6377 | 1.2785 | 0.9512 | 22.2837 | 24.49 | 141.52 |
-| ExtraTrees | 0.6136 | 1.1984 | 0.9572 | 113.3908 | 4.48 | 152.85 |
+| LightGBM | 0.4984 | 1.0495 | 0.9671 | 138.0566 | 3.32 | 72.24 |
 
 ---
 
