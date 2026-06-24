@@ -1,0 +1,26 @@
+{
+  "classifier": {
+    "algorithm": "XGBoost",
+    "best_params": {
+      "colsample_bytree": 0.7246844304357644,
+      "learning_rate": 0.06160544169422487,
+      "max_depth": 4,
+      "n_estimators": 409,
+      "subsample": 0.6739417822102108
+    },
+    "val_macro_f1": 0.8635787839148583,
+    "test_accuracy": 0.8772036474164133,
+    "test_precision_macro": 0.8586055680376865,
+    "test_recall_macro": 0.863417824998264,
+    "test_macro_f1": 0.8603518708050923,
+    "test_weighted_f1": 0.8787540527187235,
+    "extreme_recall": 0.88,
+    "extreme_fn_rate": 0.12
+  },
+  "regressor": {
+    "algorithm": "LightGBM",
+    "mae": 0.006405812770153995,
+    "rmse": 0.010301389635196733,
+    "r2": 0.9848208836267716
+  }
+}

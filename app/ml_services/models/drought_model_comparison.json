@@ -1,0 +1,38 @@
+{
+  "LightGBM": {
+    "accuracy": 0.898936,
+    "precision": 0.881819,
+    "recall": 0.886677,
+    "macro_f1": 0.884122,
+    "weighted_f1": 0.899097,
+    "infer_time_ms": 75.466633,
+    "train_time_s": 15.07
+  },
+  "XGBoost": {
+    "accuracy": 0.898936,
+    "precision": 0.881492,
+    "recall": 0.886274,
+    "macro_f1": 0.883789,
+    "weighted_f1": 0.899256,
+    "infer_time_ms": 28.318405,
+    "train_time_s": 14.35
+  },
+  "RandomForest": {
+    "accuracy": 0.85461,
+    "precision": 0.840298,
+    "recall": 0.831549,
+    "macro_f1": 0.834917,
+    "weighted_f1": 0.855117,
+    "infer_time_ms": 125.938892,
+    "train_time_s": 5.29
+  },
+  "ExtraTrees": {
+    "accuracy": 0.865248,
+    "precision": 0.85354,
+    "recall": 0.844282,
+    "macro_f1": 0.847724,
+    "weighted_f1": 0.865557,
+    "infer_time_ms": 122.884274,
+    "train_time_s": 1.92
+  }
+}
