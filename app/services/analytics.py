@@ -276,7 +276,7 @@ class AnalyticsService:
             order_col = func.avg(ClimateObservation.rainfall).asc()
 
         query = select(
-            District.id.label("district_id"),
+            func.min(District.id).label("district_id"),
             District.district_name,
             District.state,
             val_col
@@ -288,7 +288,7 @@ class AnalyticsService:
             query = query.where(func.lower(District.state) == func.lower(state))
 
         query = query.group_by(
-            District.id, District.district_name, District.state
+            District.district_name, District.state
         ).order_by(order_col).limit(limit)
 
         res = await db.execute(query)

@@ -87,6 +87,10 @@ class ScenarioSimulationResponse(BaseModel):
     scenario_risk: str = Field(..., description="Overall risk category under simulated scenario conditions")
     scenario_score: float = Field(..., description="Overall risk score under simulated scenario conditions")
     risk_change: str = Field(..., description="Relative risk levels difference (e.g. +2 levels, No change)")
+    baseline_heatwave_severity: float = Field(..., description="Baseline heatwave severity score")
+    scenario_heatwave_severity: float = Field(..., description="Simulated scenario heatwave severity score")
+    baseline_rainfall_severity: float = Field(..., description="Baseline rainfall severity score")
+    scenario_rainfall_severity: float = Field(..., description="Simulated scenario rainfall severity score")
 
 
 class HeatwaveImpactResponse(BaseModel):

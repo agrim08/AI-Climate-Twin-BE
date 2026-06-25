@@ -473,14 +473,14 @@ class DroughtPredictor:
         rain_norm = max(0.0, min(1.5, rainfall_mm / (rain_climo + 1e-6)))
         sro_norm = max(0.0, min(1.0, sro / 0.05))
         
-        # Water Stress Index: 0 to 100
-        wsi = 100.0 * (
+        # Water Stress Index: 0.0 to 1.0
+        wsi = (
             0.30 * (1.0 - sm_norm) +
             0.30 * (1.0 - min(1.0, rain_norm)) +
             0.10 * (1.0 - sro_norm) +
             0.30 * risk_score
         )
-        wsi = round(max(0.0, min(100.0, wsi)), 1)
+        wsi = round(max(0.0, min(1.0, wsi)), 4)
         
         # Reservoir Risk: derived from short term runoff efficiency and rainfall deficit
         if rainfall_mm < 10.0 and sro < 0.002 and risk_score > 0.6:
@@ -507,11 +507,11 @@ class DroughtPredictor:
             gw_risk = "Low"
             
         # Status Mapping
-        if wsi > 75.0:
+        if wsi > 0.75:
             status = "Deficit"
-        elif wsi > 50.0:
+        elif wsi > 0.50:
             status = "Stressed"
-        elif wsi > 20.0:
+        elif wsi > 0.20:
             status = "Sufficient"
         else:
             status = "Abundant"
@@ -537,20 +537,20 @@ class DroughtPredictor:
         # Heat stress scaling (optimal is <28C, stressed is >40C)
         temp_factor = max(0.0, min(1.0, (temp_c - 28.0) / 12.0))
         
-        # Crop Stress Index: 0 to 100
-        csi = 100.0 * (
+        # Crop Stress Index: 0.0 to 1.0
+        csi = (
             0.45 * sm_factor +
             0.25 * temp_factor +
             0.30 * risk_score
         )
-        csi = round(max(0.0, min(100.0, csi)), 1)
+        csi = round(max(0.0, min(1.0, csi)), 4)
         
         # Irrigation Need
         if soil_moisture < 0.10 and temp_c > 35.0:
             ir_need = "Critical"
-        elif soil_moisture < 0.15 or csi > 65.0:
+        elif soil_moisture < 0.15 or csi > 0.65:
             ir_need = "High"
-        elif soil_moisture < 0.22 or csi > 35.0:
+        elif soil_moisture < 0.22 or csi > 0.35:
             ir_need = "Medium"
         else:
             ir_need = "Low"
@@ -560,11 +560,11 @@ class DroughtPredictor:
         pred_idx = int(self.model.predict(df_input)[0])
         drought_cat = LABEL_DECODER[pred_idx]
         
-        if csi > 75.0 or drought_cat == "Extreme":
+        if csi > 0.75 or drought_cat == "Extreme":
             ag_risk = "Critical"
-        elif csi > 50.0 or drought_cat == "High":
+        elif csi > 0.50 or drought_cat == "High":
             ag_risk = "High"
-        elif csi > 25.0 or drought_cat == "Medium":
+        elif csi > 0.25 or drought_cat == "Medium":
             ag_risk = "Medium"
         else:
             ag_risk = "Low"

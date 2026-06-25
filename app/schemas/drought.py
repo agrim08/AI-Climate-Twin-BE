@@ -96,14 +96,14 @@ class DriverAnalysisResponse(BaseModel):
 
 
 class WaterStressResponse(BaseModel):
-    water_stress_index: float = Field(..., description="Hydrological water stress index (0-100)")
+    water_stress_index: float = Field(..., description="Hydrological water stress index (0.0 to 1.0)")
     reservoir_risk: str = Field(..., description="Assessed risk level for reservoirs (Low, Medium, High, Critical)")
     groundwater_risk: str = Field(..., description="Assessed risk level for groundwater aquifers (Low, Medium, High, Critical)")
     water_availability_status: str = Field(..., description="Qualitative status (Abundant, Sufficient, Stressed, Deficit)")
 
 
 class AgriculturalStressResponse(BaseModel):
-    crop_stress_index: float = Field(..., description="Agricultural crop health stress index (0-100)")
+    crop_stress_index: float = Field(..., description="Agricultural crop health stress index (0.0 to 1.0)")
     irrigation_need: str = Field(..., description="Assessed irrigation urgency level (Low, Medium, High, Critical)")
     agricultural_risk: str = Field(..., description="Assessed risk level for agricultural yield (Low, Medium, High, Critical)")
 

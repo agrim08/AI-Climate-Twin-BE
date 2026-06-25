@@ -134,11 +134,17 @@ class ClimateLookup:
         city, city_lat, city_lon, climate_zone = cls.find_nearest_city(lat, lon)
         
         # 3. Get calendar date parameters
-        month = int(req.get("month", 6))
+        try:
+            month = int(float(req.get("month", 6)))
+        except (ValueError, TypeError):
+            month = 6
         if not (1 <= month <= 12):
             logger.warning(f"Lookup Engine: Invalid month {month} provided. Clamping to [1, 12].")
             month = max(1, min(12, month))
-        year = int(req.get("year", 2024))
+        try:
+            year = int(float(req.get("year", 2024)))
+        except (ValueError, TypeError):
+            year = 2024
         
         # 4. Fetch Climatology Baselines
         climo_city = cls._climo_city_month[
@@ -240,6 +246,14 @@ class ClimateLookup:
         # Enforce name mappings
         f_state["climate_zone"] = climate_zone
         f_state["city"] = city
+        try:
+            f_state["year"] = int(float(f_state.get("year", year)))
+        except (ValueError, TypeError):
+            f_state["year"] = int(year)
+        try:
+            f_state["month"] = int(float(f_state.get("month", month)))
+        except (ValueError, TypeError):
+            f_state["month"] = int(month)
         f_state["temperature_climatology"] = f_state.get("temp_climo_mean", 28.0)
         f_state["temperature_climatology_std"] = f_state.get("temp_climo_std", 2.0)
         f_state["rainfall_climatology"] = f_state.get("rain_climo_mean", 12.0)

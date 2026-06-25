@@ -127,11 +127,12 @@ async def _evaluate_district(
         temp_p, rain_p, drought_p, extreme_p = _get_predictors()
 
         # --- Cache key (keyed per-district-scenario) ---
-        cache_key = PredictionCache.make_key(
+        base_key = PredictionCache.make_key(
             district.latitude, district.longitude,
             year, month,
             temp_delta=temp_delta, rain_delta=rain_delta, sm_delta=sm_delta
         )
+        cache_key = f"rankings_{base_key}"
         cached = PredictionCache.get(cache_key)
         if cached is not None:
             return cached
@@ -256,7 +257,17 @@ async def _evaluate_all_districts(
     """Fetch all districts and evaluate each through the chained pipeline."""
     query = select(District)
     result = await db.execute(query)
-    districts = result.scalars().all()
+    raw_districts = result.scalars().all()
+
+    # Deduplicate districts by (district_name, state) in python
+    seen = set()
+    districts = []
+    for d in raw_districts:
+        key = (d.district_name.strip().lower(), d.state.strip().lower())
+        if key not in seen:
+            seen.add(key)
+            districts.append(d)
+
 
     if not districts:
         logger.warning("Rankings: No districts found in database.")
@@ -580,4 +591,5 @@ class RankingsService:
             "month": month,
             "total_districts": len(emerging_sorted),
             "top_emerging_risks": emerging_sorted[:top_n],
+            "emerging_risks": emerging_sorted[:top_n],
         }
