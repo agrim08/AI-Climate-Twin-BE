@@ -34,7 +34,7 @@ latitude, longitude, year, month, temperature_c, soil_moisture, evabs, sro, mont
 
 | Model | MAE | RMSE | R² | MAPE | Train(s) | Infer(ms) |
 |-------|-----|------|-----|------|----------|-----------|
-| LightGBM | 0.4984 | 1.0495 | 0.9671 | 138.0566 | 3.32 | 72.24 |
+| LightGBM | 0.4984 | 1.0495 | 0.9671 | 138.0566 | 7.35 | 179.05 |
 
 ---
 

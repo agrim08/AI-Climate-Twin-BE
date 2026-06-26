@@ -196,6 +196,8 @@ class ClimateLookup:
             
         if not hist_row.empty:
             h_data = hist_row.iloc[0].to_dict()
+            actual_record_year = int(h_data.get("year", year))
+            years_ahead = max(0, year - actual_record_year)
             
             def get_valid_val(key: str, default: float) -> float:
                 val = h_data.get(key)
@@ -203,24 +205,50 @@ class ClimateLookup:
                     return default
                 return float(val)
                 
+            # Base variables
+            base_temp = get_valid_val("temperature_c", 30.0)
+            base_rain = get_valid_val("rainfall_mm", 10.0)
+            base_sm = get_valid_val("soil_moisture", 0.20)
+            base_temp_prev1 = get_valid_val("temperature_prev_1", 29.0)
+            base_temp_prev3 = get_valid_val("temperature_prev_3", 28.0)
+            base_rain_prev1 = get_valid_val("rainfall_prev_1", 5.0)
+            base_rain_prev3 = get_valid_val("rainfall_prev_3", 2.0)
+            base_sm_prev1 = get_valid_val("soil_moisture_prev_1", 0.18)
+
+            # Apply CMIP6 heuristic deltas if we are projecting into the future
+            if years_ahead > 0:
+                temp_delta = 0.04 * years_ahead
+                base_temp += temp_delta
+                base_temp_prev1 += temp_delta
+                base_temp_prev3 += temp_delta
+                
+                rain_mult = 1.0 + (0.002 * years_ahead)
+                base_rain *= rain_mult
+                base_rain_prev1 *= rain_mult
+                base_rain_prev3 *= rain_mult
+                
+                sm_mult = 1.0 - (0.001 * years_ahead)
+                base_sm *= sm_mult
+                base_sm_prev1 *= sm_mult
+
             # Add variables
             f_state.update({
-                "temperature_c": get_valid_val("temperature_c", 30.0),
-                "rainfall_mm": get_valid_val("rainfall_mm", 10.0),
-                "soil_moisture": get_valid_val("soil_moisture", 0.20),
+                "temperature_c": base_temp,
+                "rainfall_mm": base_rain,
+                "soil_moisture": base_sm,
                 "evabs": get_valid_val("evabs", -0.001),
                 "sro": get_valid_val("sro", 0.001),
-                "temperature_prev_1": get_valid_val("temperature_prev_1", 29.0),
-                "temperature_prev_3": get_valid_val("temperature_prev_3", 28.0),
-                "rainfall_prev_1": get_valid_val("rainfall_prev_1", 5.0),
-                "rainfall_prev_3": get_valid_val("rainfall_prev_3", 2.0),
-                "soil_moisture_prev_1": get_valid_val("soil_moisture_prev_1", 0.18),
-                "rolling_temp_3m": get_valid_val("rolling_temp_3m", 28.5),
-                "rolling_rainfall_3m": get_valid_val("rolling_rainfall_3m", 15.0),
-                "rolling_temp_6m": get_valid_val("rolling_temp_6m", 25.0),
-                "rolling_rainfall_6m": get_valid_val("rolling_rainfall_6m", 30.0),
-                "rolling_sm_3m": get_valid_val("rolling_sm_3m", 0.22) if "rolling_sm_3m" in h_data else 0.22,
-                "rolling_sm_6m": get_valid_val("rolling_sm_6m", 0.25) if "rolling_sm_6m" in h_data else 0.25,
+                "temperature_prev_1": base_temp_prev1,
+                "temperature_prev_3": base_temp_prev3,
+                "rainfall_prev_1": base_rain_prev1,
+                "rainfall_prev_3": base_rain_prev3,
+                "soil_moisture_prev_1": base_sm_prev1,
+                "rolling_temp_3m": get_valid_val("rolling_temp_3m", 28.5) + (0.04 * years_ahead),
+                "rolling_rainfall_3m": get_valid_val("rolling_rainfall_3m", 15.0) * (1.0 + 0.002 * years_ahead),
+                "rolling_temp_6m": get_valid_val("rolling_temp_6m", 25.0) + (0.04 * years_ahead),
+                "rolling_rainfall_6m": get_valid_val("rolling_rainfall_6m", 30.0) * (1.0 + 0.002 * years_ahead),
+                "rolling_sm_3m": (get_valid_val("rolling_sm_3m", 0.22) if "rolling_sm_3m" in h_data else 0.22) * (1.0 - 0.001 * years_ahead),
+                "rolling_sm_6m": (get_valid_val("rolling_sm_6m", 0.25) if "rolling_sm_6m" in h_data else 0.25) * (1.0 - 0.001 * years_ahead),
                 "dry_month_streak": get_valid_val("dry_month_streak", 0.0) if "dry_month_streak" in h_data else 0.0,
                 "deficit_streak": get_valid_val("deficit_streak", 0.0) if "deficit_streak" in h_data else 0.0,
                 "low_sm_streak": get_valid_val("low_sm_streak", 0.0) if "low_sm_streak" in h_data else 0.0,

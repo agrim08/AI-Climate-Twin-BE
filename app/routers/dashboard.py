@@ -20,12 +20,19 @@ class RainfallDistrictDetail(BaseModel):
     state: str
     average_rainfall: float
 
+class ColdestDistrictDetail(BaseModel):
+    district_id: int
+    district_name: str
+    state: str
+    average_temperature: float
+
 class PublicDashboardOverview(BaseModel):
     total_districts: int
     total_observations: int
     latest_forecasts_count: int
     latest_simulations_count: int
     top_5_hottest_districts: List[HottestDistrictDetail]
+    top_5_coldest_districts: List[ColdestDistrictDetail]
     top_5_highest_rainfall_districts: List[RainfallDistrictDetail]
 
 @router.get("/overview", response_model=PublicDashboardOverview)

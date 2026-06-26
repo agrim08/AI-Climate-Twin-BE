@@ -26,12 +26,12 @@ class ClimateIngestionService:
         lon = district.longitude
 
         # 2. Call Open-Meteo API async
-        # We fetch 7 past days. Daily variables: rain_sum, temperature_2m_mean, relative_humidity_2m_mean
+        # We fetch 7 past days. Daily variables: rain_sum, temperature_2m_max, relative_humidity_2m_mean
         url = (
             f"https://api.open-meteo.com/v1/forecast"
             f"?latitude={lat}&longitude={lon}"
             f"&past_days=7"
-            f"&daily=rain_sum,temperature_2m_mean,relative_humidity_2m_mean"
+            f"&daily=rain_sum,temperature_2m_max,relative_humidity_2m_mean"
             f"&timezone=auto"
         )
 
@@ -49,7 +49,7 @@ class ClimateIngestionService:
         daily = data.get("daily", {})
         times = daily.get("time", [])
         rain_sums = daily.get("rain_sum", [])
-        temp_means = daily.get("temperature_2m_mean", [])
+        temp_means = daily.get("temperature_2m_max", [])
         humidity_means = daily.get("relative_humidity_2m_mean", [])
 
         inserted_count = 0
