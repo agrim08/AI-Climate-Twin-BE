@@ -5,12 +5,12 @@
 This report summarizes the training, evaluation, and selection of the final production-ready model for predicting **heatwaves** across 47 Indian cities.
 
 - **Classifier Selected**: `XGBoost`
-- **Validation Macro F1**: `0.8639`
-- **Test Macro F1**: `0.8597`
-- **Test Accuracy**: `0.8766`
-- **Test Weighted F1**: `0.8783`
-- **Inference Time (batch)**: `12.3 ms`
-- **Total Pipeline Execution**: `108.63s`
+- **Validation Macro F1**: `0.8636`
+- **Test Macro F1**: `0.8604`
+- **Test Accuracy**: `0.8772`
+- **Test Weighted F1**: `0.8788`
+- **Inference Time (batch)**: `15.1 ms`
+- **Total Pipeline Execution**: `164.93s`
 
 ---
 
@@ -34,19 +34,19 @@ Candidate models were evaluated using chronological splitting (train $\le$ 2020,
 
 | Model | Accuracy | Macro F1 | Weighted F1 | Training Time |
 |---|---|---|---|---|
-| XGBoost | 0.8883 | 0.8604 | 0.8877 | 2.32s |
-| LightGBM | 0.8892 | 0.8582 | 0.8879 | 1.85s |
-| RandomForest | 0.8741 | 0.8487 | 0.8745 | 0.97s |
-| ExtraTrees | 0.8449 | 0.8232 | 0.8446 | 0.42s |
+| XGBoost | 0.8892 | 0.8607 | 0.8888 | 4.24s |
+| LightGBM | 0.8927 | 0.8603 | 0.8920 | 4.85s |
+| RandomForest | 0.8785 | 0.8512 | 0.8778 | 2.63s |
+| ExtraTrees | 0.8457 | 0.8246 | 0.8449 | 0.86s |
 
 ### Best Hyperparameters (`XGBoost`)
 ```json
 {
-  "colsample_bytree": 0.9768807022739411,
-  "learning_rate": 0.06506305742764315,
+  "colsample_bytree": 0.7246844304357644,
+  "learning_rate": 0.06160544169422487,
   "max_depth": 4,
-  "n_estimators": 414,
-  "subsample": 0.6063865008880857
+  "n_estimators": 409,
+  "subsample": 0.6739417822102108
 }
 ```
 
@@ -57,20 +57,20 @@ The optimized model was retrained on the combined Train + Validation dataset and
 
 | Metric | Holdout Test Score |
 |---|---|
-| **Accuracy** | 87.66% |
-| **Macro Precision** | 0.8590 |
-| **Macro Recall** | 0.8621 |
-| **Macro F1** | 0.8597 |
-| **Weighted F1** | 0.8783 |
+| **Accuracy** | 87.72% |
+| **Macro Precision** | 0.8586 |
+| **Macro Recall** | 0.8634 |
+| **Macro F1** | 0.8604 |
+| **Weighted F1** | 0.8788 |
 
 ### Classification Report
 ```
               precision    recall  f1-score   support
 
          Low       0.95      0.92      0.94       760
-      Medium       0.77      0.82      0.80       379
+      Medium       0.78      0.82      0.80       379
         High       0.77      0.83      0.80       256
-     Extreme       0.94      0.88      0.91       250
+     Extreme       0.93      0.88      0.90       250
 
     accuracy                           0.88      1645
    macro avg       0.86      0.86      0.86      1645
@@ -85,21 +85,21 @@ Global Gini/Gain feature importance values for the chosen model.
 
 | Rank | Feature | Importance |
 |---|---|---|
-| 1 | `hw_heat_stress` | 0.13119 |
-| 2 | `hw_compound_heat_drought` | 0.09030 |
-| 3 | `hw_temperature_zscore` | 0.07993 |
-| 4 | `hw_rainfall_heat_interaction` | 0.05651 |
-| 5 | `rainfall_mm` | 0.04243 |
-| 6 | `evabs` | 0.04036 |
-| 7 | `hw_evaporation_heat_ratio` | 0.03694 |
-| 8 | `hw_soil_heat_interaction` | 0.03614 |
-| 9 | `hw_temperature_anomaly` | 0.02842 |
-| 10 | `month_cos` | 0.02753 |
-| 11 | `hw_apparent_temp_anomaly` | 0.02520 |
-| 12 | `sro` | 0.02355 |
-| 13 | `rolling_rainfall_6m` | 0.02337 |
-| 14 | `rainfall_prev_3` | 0.02335 |
-| 15 | `latitude` | 0.02120 |
+| 1 | `hw_heat_stress` | 0.11608 |
+| 2 | `hw_rainfall_heat_interaction` | 0.08734 |
+| 3 | `hw_compound_heat_drought` | 0.07918 |
+| 4 | `hw_temperature_zscore` | 0.07519 |
+| 5 | `hw_soil_heat_interaction` | 0.04341 |
+| 6 | `evabs` | 0.03929 |
+| 7 | `rainfall_mm` | 0.03860 |
+| 8 | `hw_temperature_anomaly` | 0.03379 |
+| 9 | `hw_evaporation_heat_ratio` | 0.03188 |
+| 10 | `sro` | 0.02876 |
+| 11 | `month_cos` | 0.02856 |
+| 12 | `rainfall_prev_3` | 0.02544 |
+| 13 | `rolling_rainfall_6m` | 0.02520 |
+| 14 | `hw_apparent_temp_anomaly` | 0.02280 |
+| 15 | `latitude` | 0.02069 |
 
 ---
 
@@ -107,31 +107,31 @@ Global Gini/Gain feature importance values for the chosen model.
 A deep dive into the model failures on the holdout Test set.
 
 ### 1. Extreme Class Performance
-* **Extreme Recall Rate**: 87.60% (True detection rate for Extreme category events)
-* **Extreme Miss Rate (False-Negative Rate)**: 12.40% (Unpredicted Extreme events)
+* **Extreme Recall Rate**: 88.00% (True detection rate for Extreme category events)
+* **Extreme Miss Rate (False-Negative Rate)**: 12.00% (Unpredicted Extreme events)
 
 ### 2. Common Confusion Pairs (True $ightarrow$ Predicted)
 These represent the most common category transitions predicted incorrectly:
-- **Low->Medium**: 61 occurrences
-- **Medium->High**: 35 occurrences
-- **Medium->Low**: 33 occurrences
-- **Extreme->High**: 29 occurrences
-- **High->Medium**: 28 occurrences
+- **Low->Medium**: 62 occurrences
+- **Medium->High**: 34 occurrences
+- **Medium->Low**: 32 occurrences
+- **Extreme->High**: 28 occurrences
+- **High->Medium**: 25 occurrences
 
 ### 3. Top 10 Most Confident Misclassifications
 These are the cases where the model incorrectly predicted a category with high probability:
 | Rank | City | Date | True | Predicted | Prob (Pred) | Prob (True) | Temp (°C) | Rain (mm) |
 |---|---|---|---|---|---|---|---|---|
-| 1 | Shimla | 2024-12-01 | **Medium** | **Low** | 97.70% | 2.26% | 6.2°C | 1.7mm |
-| 2 | Bhopal | 2024-06-01 | **Low** | **Medium** | 97.33% | 2.40% | 31.1°C | 4.8mm |
-| 3 | Amritsar | 2024-01-01 | **Medium** | **Low** | 97.33% | 2.66% | 9.7°C | 0.2mm |
-| 4 | Jodhpur | 2023-08-01 | **High** | **Medium** | 93.91% | 0.75% | 28.1°C | 0.4mm |
-| 5 | Thiruvananthapuram | 2025-02-01 | **Extreme** | **High** | 93.89% | 2.97% | 26.4°C | 0.2mm |
-| 6 | Thiruvananthapuram | 2023-03-01 | **Extreme** | **High** | 92.67% | 3.30% | 27.1°C | 0.8mm |
-| 7 | Chandigarh | 2024-01-01 | **Medium** | **Low** | 93.68% | 6.32% | 11.2°C | 0.1mm |
-| 8 | Jabalpur | 2024-01-01 | **Low** | **Medium** | 92.11% | 5.38% | 17.9°C | 0.1mm |
-| 9 | Aizawl | 2024-06-01 | **Medium** | **High** | 91.36% | 5.07% | 25.4°C | 7.4mm |
-| 10 | Bhopal | 2023-10-01 | **High** | **Medium** | 92.89% | 6.82% | 24.9°C | 0.0mm |
+| 1 | Bhopal | 2024-06-01 | **Low** | **Medium** | 97.13% | 2.53% | 31.1°C | 4.8mm |
+| 2 | Amritsar | 2024-01-01 | **Medium** | **Low** | 97.30% | 2.69% | 9.7°C | 0.2mm |
+| 3 | Jodhpur | 2023-08-01 | **High** | **Medium** | 93.57% | 0.57% | 28.1°C | 0.4mm |
+| 4 | Shimla | 2024-12-01 | **Medium** | **Low** | 96.38% | 3.57% | 6.2°C | 1.7mm |
+| 5 | Thiruvananthapuram | 2025-02-01 | **Extreme** | **High** | 93.24% | 2.34% | 26.4°C | 0.2mm |
+| 6 | Chandigarh | 2024-01-01 | **Medium** | **Low** | 95.27% | 4.72% | 11.2°C | 0.1mm |
+| 7 | Thiruvananthapuram | 2023-03-01 | **Extreme** | **High** | 90.96% | 3.78% | 27.1°C | 0.8mm |
+| 8 | Guwahati | 2023-08-01 | **High** | **Medium** | 91.08% | 4.32% | 27.4°C | 10.6mm |
+| 9 | Gangtok | 2023-05-01 | **Medium** | **Low** | 93.15% | 6.48% | 17.9°C | 6.7mm |
+| 10 | Jabalpur | 2024-01-01 | **Low** | **Medium** | 91.11% | 6.21% | 17.9°C | 0.1mm |
 
 ---
 
@@ -140,14 +140,14 @@ These are the cases where the model incorrectly predicted a category with high p
 ### 1. Prediction Accuracy by Climate Zone (Lowest to Highest)
 | Climate Zone | Accuracy |
 |---|---|
-| Himalayan Region | 81.71% |
-| Western Ghats Region | 84.29% |
-| North-East Region | 85.24% |
-| Western Coastal Region | 86.43% |
-| Eastern Coastal Region | 88.57% |
-| Central Plateau Region | 88.57% |
-| Indo-Gangetic Plains | 89.80% |
-| Southern Peninsular Region | 90.48% |
+| Himalayan Region | 81.14% |
+| Western Ghats Region | 83.57% |
+| North-East Region | 86.19% |
+| Western Coastal Region | 87.14% |
+| Indo-Gangetic Plains | 87.76% |
+| Central Plateau Region | 89.39% |
+| Eastern Coastal Region | 90.48% |
+| Southern Peninsular Region | 90.95% |
 | Thar Desert Region | 92.00% |
 
 ### 2. Event Proneness by Climate Zone (% High + Extreme)
@@ -166,18 +166,18 @@ These are the cases where the model incorrectly predicted a category with high p
 ### 3. Prediction Accuracy by Month
 | Month | Accuracy |
 |---|---|
-| Month 1 | 82.98% |
-| Month 2 | 83.69% |
+| Month 1 | 86.52% |
+| Month 2 | 87.94% |
 | Month 3 | 88.65% |
-| Month 4 | 88.65% |
-| Month 5 | 94.33% |
+| Month 4 | 87.23% |
+| Month 5 | 95.04% |
 | Month 6 | 88.65% |
-| Month 7 | 87.23% |
+| Month 7 | 85.11% |
 | Month 8 | 90.78% |
-| Month 9 | 84.40% |
-| Month 10 | 89.36% |
-| Month 11 | 88.65% |
-| Month 12 | 82.98% |
+| Month 9 | 81.56% |
+| Month 10 | 87.94% |
+| Month 11 | 87.94% |
+| Month 12 | 84.04% |
 
 ---
 
@@ -185,9 +185,9 @@ These are the cases where the model incorrectly predicted a category with high p
 A continuous estimator was trained on the continuous score `heatwave_severity_score` in range `[0, 1]`.
 
 - **Best Regressor**: `LightGBMRegressor`
-- **Mean Absolute Error (MAE)**: `0.00640`
-- **Root Mean Squared Error (RMSE)**: `0.01026`
-- **$R^2$ Score**: `0.9850`
+- **Mean Absolute Error (MAE)**: `0.00641`
+- **Root Mean Squared Error (RMSE)**: `0.01030`
+- **$R^2$ Score**: `0.9848`
 
 ---
 
@@ -196,4 +196,4 @@ A continuous estimator was trained on the continuous score `heatwave_severity_sc
 2. **Climate Zone Adjustments**: Review prediction margins closely in regions with high topographical variances (e.g. Himalayan and North-East regions) which exhibit lower accuracy.
 3. **Data Refresh**: Re-evaluate and retrain features annually as newer climatology baselines become available.
 
-*Model Saved to: `C:\Users\archi\Downloads\Desktop\Hackathon\Backend\AI-Climate-Twin-BE\ml_research\scripts\..\..\app\ml_services\models\heatwave.pkl`*
+*Model Saved to: `D:\ai-climate-twin-be\ml_research\scripts\..\..\app\ml_services\models\heatwave.pkl`*

@@ -484,7 +484,11 @@ class ExtremeWeatherPredictor:
             "baseline_score": b_risk["overall_risk_score"],
             "scenario_risk": s_risk["overall_extreme_weather_risk"],
             "scenario_score": s_risk["overall_risk_score"],
-            "risk_change": risk_change
+            "risk_change": risk_change,
+            "baseline_heatwave_severity": b_res["heatwave"]["severity"],
+            "scenario_heatwave_severity": s_res["heatwave"]["severity"],
+            "baseline_rainfall_severity": b_res["extreme_rainfall"]["severity"],
+            "scenario_rainfall_severity": s_res["extreme_rainfall"]["severity"]
         }
 
     def get_heatwave_impact(self, severity: float, temp_anomaly: float, probs: np.ndarray) -> Dict[str, Any]:

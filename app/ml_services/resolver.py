@@ -31,8 +31,14 @@ class ClimateStateResolver:
         district_id = req.get("district_id")
         use_live = req.get("use_live", False)
         
-        year = payload.get("year", 2024)
-        month = payload.get("month", 6)
+        try:
+            year = int(float(payload.get("year", 2024)))
+        except (ValueError, TypeError):
+            year = 2024
+        try:
+            month = int(float(payload.get("month", 6)))
+        except (ValueError, TypeError):
+            month = 6
         
         # Default metadata values
         source = "HISTORICAL"

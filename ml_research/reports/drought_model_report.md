@@ -9,8 +9,8 @@ as a core component of the AI Climate Digital Twin of India.
 - **Test Macro F1**: 0.9096
 - **Test Accuracy**: 0.9106
 - **Test Weighted F1**: 0.9106
-- **Total Training Time**: 35.4s
-- **Inference Time**: 116.0ms
+- **Total Training Time**: 60.5s
+- **Inference Time**: 254.7ms
 
 ---
 
@@ -33,10 +33,10 @@ as a core component of the AI Climate Digital Twin of India.
 ## Model Comparison (Validation Set)
 | Model | Accuracy | Macro F1 | Weighted F1 | Train Time |
 |-------|----------|----------|-------------|------------|
-| LightGBM | 0.8989 | 0.8841 | 0.8991 | 11.1s |
-| XGBoost | 0.8901 | 0.8742 | 0.8905 | 10.0s |
-| RandomForest | 0.8573 | 0.8407 | 0.8580 | 1.9s |
-| ExtraTrees | 0.8555 | 0.8361 | 0.8557 | 1.0s |
+| LightGBM | 0.8989 | 0.8841 | 0.8991 | 14.6s |
+| XGBoost | 0.8989 | 0.8838 | 0.8993 | 16.3s |
+| ExtraTrees | 0.8652 | 0.8477 | 0.8656 | 2.1s |
+| RandomForest | 0.8546 | 0.8349 | 0.8551 | 5.5s |
 
 **Selection Criterion**: Macro F1 (penalises models that ignore minority classes)
 
@@ -63,7 +63,7 @@ as a core component of the AI Climate Digital Twin of India.
 | Macro Recall | 0.9103 |
 | Macro F1 | 0.9096 |
 | Weighted F1 | 0.9106 |
-| Inference Time | 116.0 ms |
+| Inference Time | 254.7 ms |
 
 ### Classification Report
 ```
@@ -172,4 +172,4 @@ weighted avg       0.91      0.91      0.91      1645
 
 ---
 
-*Model saved to: `C:\Users\archi\Downloads\Desktop\Hackathon\Backend\AI-Climate-Twin-BE\ml_research\scripts\..\..\app\ml_services\models\drought.pkl`*
+*Model saved to: `D:\ai-climate-twin-be\ml_research\scripts\..\..\app\ml_services\models\drought.pkl`*

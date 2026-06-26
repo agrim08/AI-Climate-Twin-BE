@@ -29,7 +29,7 @@ class ScenarioRankingInput(BaseModel):
     temp_delta: float = Field(0.0, description="Absolute temperature change (°C)")
     rain_delta: float = Field(0.0, description="Percentage rainfall change (%)")
     sm_delta: float = Field(0.0, description="Percentage soil moisture change (%)")
-    top_n: int = Field(5, ge=1, le=50, description="Number of top/bottom districts to return")
+    top_n: int = Field(5, ge=1, le=500, description="Number of top/bottom districts to return")
 
 
 # ---------------------------------------------------------------------------
@@ -40,7 +40,7 @@ class ScenarioRankingInput(BaseModel):
 async def get_current_rankings(
     year: int = Query(2025, ge=2020, le=2100, description="Reference year"),
     month: int = Query(6, ge=1, le=12, description="Reference month"),
-    top_n: int = Query(5, ge=1, le=50, description="Number of districts to return"),
+    top_n: int = Query(5, ge=1, le=500, description="Number of districts to return"),
     db: AsyncSession = Depends(get_db),
 ) -> Dict[str, Any]:
     """
@@ -69,7 +69,7 @@ async def get_current_rankings(
 async def get_year_rankings(
     year: int,
     month: int = Query(6, ge=1, le=12, description="Reference month"),
-    top_n: int = Query(5, ge=1, le=50, description="Number of districts to return"),
+    top_n: int = Query(5, ge=1, le=500, description="Number of districts to return"),
     db: AsyncSession = Depends(get_db),
 ) -> Dict[str, Any]:
     """
@@ -120,7 +120,7 @@ async def get_scenario_rankings(
 async def get_hotspots(
     year: int = Query(2025, ge=2020, le=2100, description="Reference year"),
     month: int = Query(6, ge=1, le=12, description="Reference month"),
-    top_n: int = Query(10, ge=1, le=50, description="Number of hotspots to return per category"),
+    top_n: int = Query(10, ge=1, le=500, description="Number of hotspots to return per category"),
     db: AsyncSession = Depends(get_db),
 ) -> Dict[str, Any]:
     """
@@ -145,7 +145,7 @@ async def get_rank_movement(
     base_year: int = Query(2025, ge=2020, le=2100, description="Base year for comparison"),
     target_year: int = Query(2035, ge=2020, le=2100, description="Target year for comparison"),
     month: int = Query(6, ge=1, le=12, description="Reference month"),
-    top_n: int = Query(10, ge=1, le=50, description="Number of districts per movement category"),
+    top_n: int = Query(10, ge=1, le=500, description="Number of districts per movement category"),
     db: AsyncSession = Depends(get_db),
 ) -> Dict[str, Any]:
     """
@@ -184,7 +184,7 @@ async def get_trends(
         description="Comma-separated target projection years (e.g. '2030,2035,2040,2050'). "
                     "Defaults to 2030,2035,2040,2050 if not provided."
     ),
-    top_n: int = Query(10, ge=1, le=50, description="Number of districts per trend category"),
+    top_n: int = Query(10, ge=1, le=500, description="Number of districts per trend category"),
     db: AsyncSession = Depends(get_db),
 ) -> Dict[str, Any]:
     """
@@ -225,7 +225,7 @@ async def get_emerging_risks(
     base_year: int = Query(2025, ge=2020, le=2100, description="Current reference year"),
     target_year: int = Query(2035, ge=2020, le=2100, description="Future target year"),
     month: int = Query(6, ge=1, le=12, description="Reference month"),
-    top_n: int = Query(10, ge=1, le=50, description="Number of emerging risk districts to return"),
+    top_n: int = Query(10, ge=1, le=500, description="Number of emerging risk districts to return"),
     db: AsyncSession = Depends(get_db),
 ) -> Dict[str, Any]:
     """

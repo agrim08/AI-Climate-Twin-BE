@@ -51,14 +51,14 @@ class DashboardService:
         
         # 2. Fetch top 5 hottest districts based on average temperature
         hottest_query = select(
-            District.id.label("district_id"),
+            func.min(District.id).label("district_id"),
             District.district_name,
             District.state,
             func.avg(ClimateObservation.temperature).label("average_temperature")
         ).join(
             ClimateObservation, ClimateObservation.district_id == District.id
         ).group_by(
-            District.id, District.district_name, District.state
+            District.district_name, District.state
         ).order_by(
             func.avg(ClimateObservation.temperature).desc()
         ).limit(5)
@@ -74,16 +74,41 @@ class DashboardService:
             for r in hottest_result.fetchall()
         ]
         
+        # 2.5 Fetch top 5 coldest districts based on average temperature
+        coldest_query = select(
+            func.min(District.id).label("district_id"),
+            District.district_name,
+            District.state,
+            func.avg(ClimateObservation.temperature).label("average_temperature")
+        ).join(
+            ClimateObservation, ClimateObservation.district_id == District.id
+        ).group_by(
+            District.district_name, District.state
+        ).order_by(
+            func.avg(ClimateObservation.temperature).asc()
+        ).limit(5)
+        
+        coldest_result = await db.execute(coldest_query)
+        top_coldest = [
+            {
+                "district_id": r.district_id,
+                "district_name": r.district_name,
+                "state": r.state,
+                "average_temperature": round(float(r.average_temperature), 2)
+            }
+            for r in coldest_result.fetchall()
+        ]
+        
         # 3. Fetch top 5 highest rainfall districts based on average rainfall
         rainfall_query = select(
-            District.id.label("district_id"),
+            func.min(District.id).label("district_id"),
             District.district_name,
             District.state,
             func.avg(ClimateObservation.rainfall).label("average_rainfall")
         ).join(
             ClimateObservation, ClimateObservation.district_id == District.id
         ).group_by(
-            District.id, District.district_name, District.state
+            District.district_name, District.state
         ).order_by(
             func.avg(ClimateObservation.rainfall).desc()
         ).limit(5)
@@ -105,6 +130,7 @@ class DashboardService:
             "latest_forecasts_count": forecasts_count,
             "latest_simulations_count": sim_count,
             "top_5_hottest_districts": top_hottest,
+            "top_5_coldest_districts": top_coldest,
             "top_5_highest_rainfall_districts": top_rainfall
         }
 
