@@ -71,14 +71,15 @@ class ClimateLookup:
                 seasonal_rain_mean=("rainfall_mm", "mean"),
             ).reset_index()
 
-            logger.info("Lookup Engine initialized successfully with 47 cities and climatology baselines.")
+            n_cities = len(cls._coords)
+            logger.info(f"Lookup Engine initialized successfully with {n_cities} reference cities and climatology baselines.")
         except Exception as e:
             logger.critical(f"Lookup Engine failed to initialize: {str(e)}", exc_info=True)
             raise
 
     @classmethod
     def find_nearest_city(cls, lat: float, lon: float) -> Tuple[str, float, float, str]:
-        """Finds the nearest coordinate out of the 47 cities using Euclidean distance."""
+        """Finds the nearest reference city using Euclidean distance on lat/lon."""
         if cls._coords is None:
             cls.initialize()
             

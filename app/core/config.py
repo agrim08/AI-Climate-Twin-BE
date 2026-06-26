@@ -10,6 +10,9 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "ClimateTwin India"
     API_V1_STR: str = "/api/v1"
     CACHE_TTL: int = 86400  # Default cache TTL: 24 hours
+
+    # Gemini AI
+    GEMINI_API_KEY: str = ""
     
     # CORS Origins
     # Expected formats in .env:
