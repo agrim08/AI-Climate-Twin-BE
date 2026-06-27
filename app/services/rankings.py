@@ -186,16 +186,42 @@ async def _evaluate_district(
             ew_res["heatwave"], ew_res["extreme_rainfall"],
             ew_res["heatwave"]["_probabilities"], ew_res["extreme_rainfall"]["_probabilities"]
         )
+        # --- Water stress index (independent of drought model output) ---
+        # Uses raw soil moisture, evapotranspiration magnitude, and runoff as independent signals.
+        # This breaks the rainfall → drought_score → water_stress collinearity chain
+        # that caused desert districts (Barmer/Pali) to dominate all risk leaderboards.
+        sm_val = float(payload.get("soil_moisture", 0.2))
+        evabs_val = abs(float(payload.get("evabs", -0.001)))  # evapotranspiration magnitude
+        sro_val = float(payload.get("sro", 0.001))            # surface runoff
 
-        # --- Water & agriculture stress proxies ---
-        # Water Stress Index: drought severity × (1 - soil_moisture)
-        water_stress = float(d_res["severity_score"]) * (1.0 - float(payload.get("soil_moisture", 0.2)))
-        water_stress = round(min(max(water_stress, 0.0), 1.0), 4)
+        # Normalise each signal independently to [0, 1]
+        sm_deficit_norm = max(0.0, min(1.0, (0.40 - sm_val) / 0.40))          # low SM → high stress
+        evap_pressure_norm = max(0.0, min(1.0, evabs_val / 0.006))             # high ET → high stress
+        low_runoff_penalty = max(0.0, min(1.0, 1.0 - (sro_val / 0.15)))       # low runoff → high stress
 
-        # Crop Stress Index: drought severity + normalised temperature anomaly proxy
-        temp_anomaly_norm = min(max((pred_temp - 25.0) / 20.0, 0.0), 1.0)
+        water_stress = round(
+            min(max(
+                0.45 * sm_deficit_norm +
+                0.35 * evap_pressure_norm +
+                0.20 * low_runoff_penalty,
+                0.0
+            ), 1.0),
+            4
+        )
+
+        # --- Crop stress index (independent of drought model output) ---
+        # Based on soil moisture deficit, temperature, and VPD-proxy (heat × dryness interaction).
+        # Prevents drought_score from cascading into both water_stress and crop_stress.
+        temp_anomaly_norm = min(max((pred_temp - 25.0) / 20.0, 0.0), 1.0)     # heat excess
+        vpd_proxy = temp_anomaly_norm * sm_deficit_norm                         # heat × dryness interaction
+
         crop_stress = round(
-            min((float(d_res["severity_score"]) * 0.6 + temp_anomaly_norm * 0.4), 1.0),
+            min(
+                0.40 * sm_deficit_norm +
+                0.30 * temp_anomaly_norm +
+                0.30 * vpd_proxy,
+                1.0
+            ),
             4
         )
 

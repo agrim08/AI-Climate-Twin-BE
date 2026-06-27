@@ -1,7 +1,7 @@
 # Rainfall Feature Engineering Report
 
 ## Pipeline Summary
-- **Total Records**: 14,288
+- **Total Records**: 61,380
 - **Total Features Engineered**: 62
 - **Target Variable**: `target_rainfall_next_month`
 - **Leakage Prevention**: Future labels (`drought_risk`, `target_temperature_next_month`) removed.
@@ -11,67 +11,70 @@
 ## Feature Classification
 
 ### Mandatory Features (Correlation ≥ 0.30 with target)
+- `zone_rainfall_climatology`
 - `rainfall_climatology`
 - `rainfall_mm`
-- `zone_rainfall_climatology`
-- `month_cos`
 - `sro`
-- `rolling_rainfall_3m`
-- `rainfall_acceleration`
-- `monsoon_phase_cos`
 - `soil_moisture`
-- `is_monsoon`
-- `rainfall_trend`
 - `rainfall_momentum`
-- `rainfall_prev_1`
+- `rainfall_acceleration`
+- `month_cos`
+- `rainfall_growth_rate`
+- `sro_trend`
+- `rainfall_trend`
 - `soil_moisture_trend`
-- `zone_rainfall_anomaly`
 - `temp_trend_3m`
+- `temperature_climatology`
+- `temperature_c`
+- `evabs`
+- `temperature_prev_1`
+- `rolling_temp_3m`
+- `monsoon_phase_sin`
+- `monsoon_phase_cos`
+- `rolling_rainfall_3m`
+- `is_monsoon`
+- `rainfall_prev_1`
+- `is_winter_dry`
+- `soil_moisture_prev_1`
 
 ### Useful Features (0.10 ≤ Correlation < 0.30)
-- `is_winter_dry`
-- `rainfall_growth_rate`
-- `monsoon_phase_sin`
-- `soil_moisture_prev_1`
-- `post_monsoon`
-- `rolling_rainfall_6m`
-- `sro_trend`
-- `zone_rainfall_zscore`
-- `longitude`
-- `rolling_rainfall_std_3m`
-- `climate_zone_Thar Desert Region`
 - `climate_zone_Western Ghats Region`
-- `soil_moisture_zone_anomaly`
-- `climate_zone_North-East Region`
-- `zone_rainfall_anomaly_pct`
-- `rolling_rainfall_median_3m`
-- `temperature_prev_1`
-- `dry_months_streak`
-- `climate_zone_Indo-Gangetic Plains`
+- `rolling_rainfall_median_6m`
+- `post_monsoon`
+- `evabs_trend`
+- `rainfall_prev_3`
+- `rolling_rainfall_std_3m`
+- `rolling_rainfall_cv_3m`
+- `rolling_temp_6m`
 - `climate_zone_Western Coastal Region`
-- `rolling_temp_3m`
+- `climate_zone_Thar Desert Region`
+- `climate_zone_Southern Peninsular Region`
+- `latitude`
+- `rolling_rainfall_std_6m`
+- `climate_zone_North-East Region`
+- `pre_monsoon`
 
 ### Experimental Features (Correlation < 0.10)
-- `temperature_c`
-- `temperature_climatology`
-- `month_sin`
-- `climate_zone_Himalayan Region`
-- `latitude`
-- `climate_zone_Southern Peninsular Region`
-- `climate_zone_Central Plateau Region`
-- `rainfall_prev_3`
-- `rainfall_anomaly`
-- `rolling_rainfall_cv_3m`
-- `monsoon_phase`
-- `wet_months_streak`
-- `rolling_rainfall_median_6m`
-- `month`
-- `rolling_rainfall_std_6m`
-- `rainfall_seasonal_deviation`
-- `pre_monsoon`
-- `rolling_temp_6m`
-- `year`
 - `temperature_prev_3`
+- `month`
+- `rolling_rainfall_6m`
+- `climate_zone_Indo-Gangetic Plains`
+- `climate_zone_Central Plateau Region`
+- `longitude`
+- `rolling_rainfall_median_3m`
+- `monsoon_phase`
+- `climate_zone_Eastern Coastal Region`
+- `year`
+- `climate_zone_Himalayan Region`
+- `month_sin`
+- `temperature_anomaly`
+- `wet_months_streak`
+- `rainfall_seasonal_deviation`
+- `rainfall_anomaly_pct`
+- `rainfall_anomaly`
+- `zone_rainfall_anomaly_pct`
+- `zone_rainfall_anomaly`
+- `zone_rainfall_zscore`
 
 ---
 
@@ -79,26 +82,26 @@
 
 | Rank | Feature | |Correlation| |
 |------|---------|------------|
-| 1 | rainfall_climatology | 0.7345 |
-| 2 | rainfall_mm | 0.6782 |
-| 3 | zone_rainfall_climatology | 0.6210 |
-| 4 | month_cos | 0.5358 |
-| 5 | sro | 0.4869 |
-| 6 | rolling_rainfall_3m | 0.4600 |
-| 7 | rainfall_acceleration | 0.4507 |
-| 8 | monsoon_phase_cos | 0.4368 |
-| 9 | soil_moisture | 0.4341 |
-| 10 | is_monsoon | 0.4168 |
-| 11 | rainfall_trend | 0.3979 |
-| 12 | rainfall_momentum | 0.3898 |
-| 13 | rainfall_prev_1 | 0.3832 |
-| 14 | soil_moisture_trend | 0.3301 |
-| 15 | zone_rainfall_anomaly | 0.3207 |
-| 16 | temp_trend_3m | 0.3039 |
-| 17 | is_winter_dry | 0.2930 |
-| 18 | rainfall_growth_rate | 0.2841 |
-| 19 | monsoon_phase_sin | 0.2653 |
-| 20 | soil_moisture_prev_1 | 0.2333 |
+| 1 | zone_rainfall_climatology | 0.7865 |
+| 2 | rainfall_climatology | 0.7864 |
+| 3 | rainfall_mm | 0.7845 |
+| 4 | sro | 0.7845 |
+| 5 | soil_moisture | 0.7456 |
+| 6 | rainfall_momentum | 0.6985 |
+| 7 | rainfall_acceleration | 0.6609 |
+| 8 | month_cos | 0.6558 |
+| 9 | rainfall_growth_rate | 0.5880 |
+| 10 | sro_trend | 0.5872 |
+| 11 | rainfall_trend | 0.4837 |
+| 12 | soil_moisture_trend | 0.4833 |
+| 13 | temp_trend_3m | 0.4652 |
+| 14 | temperature_climatology | 0.4436 |
+| 15 | temperature_c | 0.4372 |
+| 16 | evabs | 0.4369 |
+| 17 | temperature_prev_1 | 0.4365 |
+| 18 | rolling_temp_3m | 0.4298 |
+| 19 | monsoon_phase_sin | 0.4197 |
+| 20 | monsoon_phase_cos | 0.4088 |
 
 ---
 

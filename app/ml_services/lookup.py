@@ -287,6 +287,8 @@ class ClimateLookup:
         f_state["temperature_climatology_std"] = f_state.get("temp_climo_std", 2.0)
         f_state["rainfall_climatology"] = f_state.get("rain_climo_mean", 12.0)
         f_state["rainfall_climatology_std"] = f_state.get("rain_climo_std", 5.0)
+        f_state["zone_rainfall_climatology"] = f_state.get("zone_rain_mean", 10.0)
+        f_state["prev_climo"] = f_state.get("lag1_climatology", f_state.get("rain_climo_mean", 10.0))
         f_state["sm_climatology"] = f_state.get("sm_climo_mean", 0.25)
         f_state["sm_climatology_std"] = f_state.get("sm_climo_std", 0.05)
         

@@ -1,6 +1,7 @@
+from datetime import date, datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import func
+from sqlalchemy import func, extract
 from app.models.district import District
 from app.models.climate_observation import ClimateObservation
 from app.models.forecast import Forecast
@@ -74,18 +75,23 @@ class DashboardService:
             for r in hottest_result.fetchall()
         ]
         
-        # 2.5 Fetch top 5 coldest districts based on average temperature
+        # 2.5  Top 5 coldest districts — uses daytime high (T_max) to match the
+        # heatwave leaderboard context. Filters to the current month so that
+        # Himalayan winter readings don't pollute a summer dashboard.
+        current_month = datetime.utcnow().month
         coldest_query = select(
             func.min(District.id).label("district_id"),
             District.district_name,
             District.state,
-            func.avg(ClimateObservation.temperature).label("average_temperature")
+            func.max(ClimateObservation.temperature).label("average_temperature")
         ).join(
             ClimateObservation, ClimateObservation.district_id == District.id
+        ).where(
+            extract("month", ClimateObservation.observation_date) == current_month
         ).group_by(
             District.district_name, District.state
         ).order_by(
-            func.avg(ClimateObservation.temperature).asc()
+            func.max(ClimateObservation.temperature).asc()
         ).limit(5)
         
         coldest_result = await db.execute(coldest_query)

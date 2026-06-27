@@ -156,10 +156,10 @@ class RainfallPredictor:
         roll_temp_6m = float(request.get("rolling_temp_6m", 25.0))
         roll_rain_6m = float(request.get("rolling_rainfall_6m", 5.0))
         
-        roll_rain_std_3m = float(request.get("rolling_rainfall_std_3m", 2.0))
-        roll_rain_std_6m = float(request.get("rolling_rainfall_std_6m", 1.5))
-        roll_rain_med_3m = float(request.get("rolling_rainfall_median_3m", 7.0))
-        roll_rain_med_6m = float(request.get("rolling_rainfall_median_6m", 4.0))
+        roll_rain_std_3m = float(request.get("rolling_rainfall_std_3m", float(request.get("rainfall_climatology_std", 10.0)) * 1.2))
+        roll_rain_std_6m = float(request.get("rolling_rainfall_std_6m", float(request.get("rainfall_climatology_std", 10.0)) * 1.5))
+        roll_rain_med_3m = float(request.get("rolling_rainfall_median_3m", roll_rain_3m / 3.0))
+        roll_rain_med_6m = float(request.get("rolling_rainfall_median_6m", roll_rain_6m / 6.0))
         
         dry_streak = float(request.get("dry_months_streak", 0.0))
         wet_streak = float(request.get("wet_months_streak", 1.0))

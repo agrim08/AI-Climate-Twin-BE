@@ -5,19 +5,19 @@ A production-ready **Climate State Rainfall Model** has been successfully traine
 and selected for the AI Climate Digital Twin of India.
 
 - **Best Model**: LightGBM
-- **Test R²**: 0.9697
-- **Test RMSE**: 0.9756 mm
-- **Test MAE**: 0.502 mm
-- **Test MAPE**: 154.2833%
+- **Test R²**: 0.9999
+- **Test RMSE**: 1.063 mm
+- **Test MAE**: 0.523 mm
+- **Test MAPE**: 0.9238%
 
 ---
 
 ## Dataset Overview
 | Property | Value |
 |----------|-------|
-| Train rows | 11,515 (year ≤ 2020) |
-| Validation rows | 1,128 (2021–2022) |
-| Test rows | 1,645 (year ≥ 2023) |
+| Train rows | 49,500 (year ≤ 2020) |
+| Validation rows | 4,752 (2021–2022) |
+| Test rows | 7,128 (year ≥ 2023) |
 | Features used | 56 |
 | Target | `rainfall_mm` |
 
@@ -34,7 +34,7 @@ latitude, longitude, year, month, temperature_c, soil_moisture, evabs, sro, mont
 
 | Model | MAE | RMSE | R² | MAPE | Train(s) | Infer(ms) |
 |-------|-----|------|-----|------|----------|-----------|
-| LightGBM | 0.4984 | 1.0495 | 0.9671 | 138.0566 | 7.35 | 179.05 |
+| LightGBM | 0.5408 | 1.037 | 0.9999 | 0.971 | 7.81 | 337.36 |
 
 ---
 
@@ -44,12 +44,12 @@ latitude, longitude, year, month, temperature_c, soil_moisture, evabs, sro, mont
 ### Best Hyperparameters (after tuning)
 ```json
 {
-  "colsample_bytree": 0.7,
+  "colsample_bytree": 0.8,
   "learning_rate": 0.03,
-  "max_depth": -1,
-  "n_estimators": 1500,
-  "num_leaves": 63,
-  "subsample": 1.0
+  "max_depth": 10,
+  "n_estimators": 800,
+  "num_leaves": 127,
+  "subsample": 0.7
 }
 ```
 
@@ -58,36 +58,36 @@ latitude, longitude, year, month, temperature_c, soil_moisture, evabs, sro, mont
 ## Test Set Metrics
 | Metric | Value |
 |--------|-------|
-| MAE | 0.502 mm |
-| RMSE | 0.9756 mm |
-| R² | 0.9697 |
-| MAPE | 154.2833 % |
+| MAE | 0.523 mm |
+| RMSE | 1.063 mm |
+| R² | 0.9999 |
+| MAPE | 0.9238 % |
 
 ---
 
 ## Feature Importance (Top 20)
 | Rank | Feature | Importance |
 |------|---------|------------|
-| 1 | sro | 7388 |
-| 2 | rainfall_acceleration | 5002 |
-| 3 | rolling_rainfall_3m | 4454 |
-| 4 | rolling_rainfall_6m | 3899 |
-| 5 | rolling_rainfall_median_3m | 3741 |
-| 6 | rainfall_climatology | 3575 |
-| 7 | evabs | 3565 |
-| 8 | sro_trend | 3524 |
-| 9 | rainfall_seasonal_deviation | 3411 |
-| 10 | temperature_anomaly | 3077 |
-| 11 | soil_moisture | 2946 |
-| 12 | rolling_rainfall_cv_3m | 2905 |
-| 13 | rainfall_momentum | 2841 |
-| 14 | evabs_trend | 2592 |
-| 15 | soil_moisture_zone_anomaly | 2587 |
-| 16 | soil_moisture_trend | 2574 |
-| 17 | soil_moisture_prev_1 | 2562 |
-| 18 | rolling_rainfall_std_6m | 2174 |
-| 19 | temp_trend_3m | 2126 |
-| 20 | rolling_rainfall_std_3m | 2115 |
+| 1 | sro | 13312 |
+| 2 | rainfall_acceleration | 5838 |
+| 3 | rolling_rainfall_3m | 4626 |
+| 4 | sro_trend | 3478 |
+| 5 | rolling_rainfall_median_3m | 3300 |
+| 6 | rainfall_climatology | 3279 |
+| 7 | soil_moisture_zone_anomaly | 3154 |
+| 8 | rainfall_seasonal_deviation | 3150 |
+| 9 | temperature_anomaly | 2963 |
+| 10 | soil_moisture_trend | 2953 |
+| 11 | evabs_trend | 2927 |
+| 12 | rolling_rainfall_cv_3m | 2877 |
+| 13 | rolling_rainfall_6m | 2762 |
+| 14 | temperature_prev_3 | 2587 |
+| 15 | soil_moisture_prev_1 | 2435 |
+| 16 | year | 2397 |
+| 17 | zone_rainfall_climatology | 2327 |
+| 18 | rolling_rainfall_median_6m | 2288 |
+| 19 | soil_moisture | 2272 |
+| 20 | temperature_prev_1 | 2237 |
 
 ---
 
@@ -95,18 +95,18 @@ latitude, longitude, year, month, temperature_c, soil_moisture, evabs, sro, mont
 
 | Month | MAE (mm) | Notes |
 |-------|----------|-------|
-| Jan | 0.11 | ✅ Easiest |
-| Feb | 0.14 |  |
-| Mar | 0.15 |  |
-| Apr | 0.15 |  |
-| May | 0.49 |  |
-| Jun | 0.69 |  |
-| Jul | 1.14 | ⚠️ Hardest |
-| Aug | 0.91 |  |
-| Sep | 0.94 |  |
-| Oct | 0.76 |  |
-| Nov | 0.24 |  |
-| Dec | 0.21 |  |
+| Jan | 0.28 |  |
+| Feb | 0.30 |  |
+| Mar | 0.33 |  |
+| Apr | 0.30 |  |
+| May | 0.58 |  |
+| Jun | 0.94 |  |
+| Jul | 1.19 | ⚠️ Hardest |
+| Aug | 0.92 |  |
+| Sep | 0.60 |  |
+| Oct | 0.30 |  |
+| Nov | 0.26 | ✅ Easiest |
+| Dec | 0.29 |  |
 
 ---
 
@@ -114,27 +114,27 @@ latitude, longitude, year, month, temperature_c, soil_moisture, evabs, sro, mont
 
 | Zone | MAE (mm) |
 |------|----------|
-| Thar Desert Region | 0.12 |
-| Indo-Gangetic Plains | 0.25 |
-| Southern Peninsular Region | 0.37 |
-| Central Plateau Region | 0.41 |
-| Eastern Coastal Region | 0.53 |
+| Thar Desert Region | 0.36 |
+| Southern Peninsular Region | 0.38 |
+| Indo-Gangetic Plains | 0.40 |
+| Central Plateau Region | 0.48 |
+| Himalayan Region | 0.58 |
+| Eastern Coastal Region | 0.68 |
+| Western Coastal Region | 0.71 |
 | North-East Region | 0.72 |
-| Western Coastal Region | 0.72 |
-| Himalayan Region | 0.73 |
-| Western Ghats Region | 0.92 |
+| Western Ghats Region | 1.01 |
 
 ---
 
 ## Monsoon Behavior Analysis
 | Period | MAE (mm) |
 |--------|----------|
-| Monsoon (JJAS) | 0.917 |
-| Non-Monsoon | 0.285 |
-| Over-predictions | 860 rows |
-| Under-predictions | 785 rows |
+| Monsoon (JJAS) | 0.912 |
+| Non-Monsoon | 0.328 |
+| Over-predictions | 3768 rows |
+| Under-predictions | 3360 rows |
 
-**Easiest month**: Jan
+**Easiest month**: Nov
 **Hardest month**: Jul
 **Easiest zone**: Thar Desert Region
 **Hardest zone**: Western Ghats Region

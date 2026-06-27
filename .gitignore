@@ -236,3 +236,5 @@ app/ml_services/models/
 __pycache__
 
 .env
+interview_preparation_guide.md
+interview_questions_answers.md

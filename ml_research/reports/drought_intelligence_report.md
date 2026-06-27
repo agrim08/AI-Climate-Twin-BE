@@ -4,7 +4,7 @@
 A production-ready drought intelligence dataset has been engineered for the
 AI Climate Digital Twin of India.
 
-- **Total Records**: 14,241
+- **Total Records**: 61,182
 - **Total Features**: 73
 - **Drought Target**: `drought_category` (Low / Medium / High / Extreme)
 - **Severity Score**: `drought_severity_score` (Composite CDSS, 0–1 scale)
@@ -23,11 +23,11 @@ Drought in India is driven by:
 ### Key Correlations (Spearman)
 ```
                rainfall_mm  soil_moisture  evabs    sro  temperature_c
-rainfall_mm          1.000          0.738 -0.295  0.964          0.047
-soil_moisture        0.738          1.000 -0.419  0.789         -0.220
-evabs               -0.295         -0.419  1.000 -0.337         -0.081
-sro                  0.964          0.789 -0.337  1.000         -0.017
-temperature_c        0.047         -0.220 -0.081 -0.017          1.000
+rainfall_mm          1.000          0.786 -0.386  0.998          0.386
+soil_moisture        0.786          1.000 -0.355  0.785          0.355
+evabs               -0.386         -0.355  1.000 -0.386         -0.999
+sro                  0.998          0.785 -0.386  1.000          0.386
+temperature_c        0.386          0.355 -0.999  0.386          1.000
 ```
 
 ---
@@ -67,10 +67,10 @@ ensuring climate-zone fairness (Desert cities evaluated against desert baseline)
 ### Class Distribution
 | Category | Count | % |
 |----------|-------|---|
-| Low | 4,258 | 29.9% |
-| Medium | 4,245 | 29.8% |
-| High | 3,596 | 25.3% |
-| Extreme | 2,142 | 15.0% |
+| Low | 18,504 | 30.2% |
+| Medium | 18,262 | 29.8% |
+| High | 15,246 | 24.9% |
+| Extreme | 9,170 | 15.0% |
 
 **Class Imbalance Assessment**: By design (percentile-based), distribution is
 approximately balanced across Low/Medium/High/Extreme. Extreme events are
@@ -81,62 +81,67 @@ approximately balanced across Low/Medium/High/Extreme. Extreme events are
 ## Feature Classification
 
 ### Mandatory (Correlation ≥ 0.50)
+- `evaporation_stress`
 - `rainfall_spi`
-- `sm_zscore`
-- `rainfall_deficit_pct`
-- `sm_anomaly`
-- `zone_rain_zscore`
 - `rainfall_deficit`
-- `temperature_zscore`
-- `sm_deficit_pct`
-- `sm_deficit`
-- `moisture_stress`
-- `temperature_anomaly`
-- `zone_sm_zscore`
-- `hydrological_stress`
-- `water_availability_index`
+- `zone_rain_zscore`
 - `zone_rain_deficit`
-- `rainfall_mm`
-
-### Useful (0.20 ≤ Correlation < 0.50)
-- `zone_sm_deficit`
-- `sm_zone_anomaly`
-- `rainfall_runoff_ratio`
 - `soil_moisture`
 - `evaporation_pressure`
-- `compound_drought_stress`
-- `evaporation_stress`
-- `drought_recovery`
+- `hydrological_stress`
+- `water_availability_index`
+- `rainfall_deficit_pct`
+- `rainfall_mm`
 - `sro`
-- `rolling_rainfall_3m`
-- `runoff_efficiency`
-- `rainfall_prev_1`
-- `soil_moisture_prev_1`
+- `sm_deficit_pct`
 - `rainfall_climatology`
+
+### Useful (0.20 ≤ Correlation < 0.50)
+- `sm_zscore`
+- `sm_anomaly`
+- `zone_sm_zscore`
+- `zone_sm_deficit`
+- `sm_zone_anomaly`
+- `rainfall_evap_ratio`
+- `rolling_rainfall_3m`
+- `drought_recovery`
+- `compound_drought_stress`
+- `rainfall_prev_1`
+- `moisture_stress`
+- `soil_moisture_prev_1`
+- `sm_deficit`
+- `month_sin`
 - `rolling_rainfall_6m`
-- `temperature_stress`
+- `month_cos`
+- `sm_trend`
+- `rolling_sm_3m`
+- `zone_aridity_index`
+- `water_balance`
+- `temperature_zscore`
+- `temperature_anomaly`
+- `temperature_prev_3`
 
 ### Experimental (Correlation < 0.20)
-- `rolling_sm_3m`
-- `cumulative_sm_deficit_3m`
-- `rainfall_deficit_lag1`
-- `deficit_streak`
-- `sm_trend`
-- `water_balance`
-- `temperature_c`
-- `cumulative_deficit_3m`
-- `cumulative_sm_deficit_6m`
-- `month_sin`
-- `rolling_sm_6m`
-- `cumulative_deficit_6m`
-- `deficit_volatility_3m`
-- `zone_aridity_index`
-- `rainfall_evap_ratio`
-- `month_cos`
-- `low_sm_streak`
+- `temperature_prev_1`
+- `rolling_temp_6m`
 - `rolling_temp_3m`
+- `low_sm_streak`
+- `month`
+- `rolling_sm_6m`
 - `longitude`
-- `drought_momentum`
+- `dry_month_streak`
+- `temperature_stress`
+- `year`
+- `rainfall_prev_3`
+- `heat_excess`
+- `temperature_c`
+- `evabs`
+- `rainfall_runoff_ratio`
+- `cumulative_deficit_6m`
+- `cumulative_sm_deficit_3m`
+- `deficit_volatility_3m`
+- `latitude`
+- `drought_trend`
 
 ---
 
@@ -144,26 +149,26 @@ approximately balanced across Low/Medium/High/Extreme. Extreme events are
 
 | Rank | Feature | |Corr with CDSS| |
 |------|---------|----------------|
-| 1 | rainfall_spi | 0.8562 |
-| 2 | sm_zscore | 0.8257 |
-| 3 | rainfall_deficit_pct | 0.7884 |
-| 4 | sm_anomaly | 0.7561 |
-| 5 | zone_rain_zscore | 0.7226 |
-| 6 | rainfall_deficit | 0.6585 |
-| 7 | temperature_zscore | 0.6404 |
-| 8 | sm_deficit_pct | 0.6123 |
-| 9 | sm_deficit | 0.6029 |
-| 10 | moisture_stress | 0.5962 |
-| 11 | temperature_anomaly | 0.5925 |
-| 12 | zone_sm_zscore | 0.5265 |
-| 13 | hydrological_stress | 0.5233 |
-| 14 | water_availability_index | 0.5233 |
-| 15 | zone_rain_deficit | 0.5227 |
-| 16 | rainfall_mm | 0.5140 |
-| 17 | zone_sm_deficit | 0.4894 |
-| 18 | sm_zone_anomaly | 0.4894 |
-| 19 | rainfall_runoff_ratio | 0.4776 |
-| 20 | soil_moisture | 0.4627 |
+| 1 | evaporation_stress | 0.7470 |
+| 2 | rainfall_spi | 0.6745 |
+| 3 | rainfall_deficit | 0.6671 |
+| 4 | zone_rain_zscore | 0.6599 |
+| 5 | zone_rain_deficit | 0.6591 |
+| 6 | soil_moisture | 0.6457 |
+| 7 | evaporation_pressure | 0.6360 |
+| 8 | hydrological_stress | 0.6028 |
+| 9 | water_availability_index | 0.6028 |
+| 10 | rainfall_deficit_pct | 0.5663 |
+| 11 | rainfall_mm | 0.5612 |
+| 12 | sro | 0.5612 |
+| 13 | sm_deficit_pct | 0.5177 |
+| 14 | rainfall_climatology | 0.5160 |
+| 15 | sm_zscore | 0.4982 |
+| 16 | sm_anomaly | 0.4975 |
+| 17 | zone_sm_zscore | 0.4915 |
+| 18 | zone_sm_deficit | 0.4914 |
+| 19 | sm_zone_anomaly | 0.4914 |
+| 20 | rainfall_evap_ratio | 0.4875 |
 
 ---
 
@@ -172,15 +177,15 @@ approximately balanced across Low/Medium/High/Extreme. Extreme events are
 ### Zone-level Mean Rainfall & Soil Moisture
                             rainfall_mm  soil_moisture
 climate_zone                                          
-Central Plateau Region            3.065          0.297
-Eastern Coastal Region            4.019          0.239
-Himalayan Region                  5.580          0.310
-Indo-Gangetic Plains              2.478          0.228
-North-East Region                 6.185          0.392
-Southern Peninsular Region        2.575          0.255
-Thar Desert Region                0.870          0.128
-Western Coastal Region            6.032          0.259
-Western Ghats Region              6.896          0.336
+Central Plateau Region           83.479          0.205
+Eastern Coastal Region          101.107          0.225
+Himalayan Region                 93.616          0.216
+Indo-Gangetic Plains             76.061          0.195
+North-East Region               145.929          0.282
+Southern Peninsular Region       63.642          0.180
+Thar Desert Region               21.018          0.126
+Western Coastal Region          166.040          0.308
+Western Ghats Region            230.957          0.383
 
 Key observations:
 - **Thar Desert Region**: Extremely low baseline rainfall — drought is the norm.

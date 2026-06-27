@@ -348,7 +348,25 @@ class ExtremeWeatherPredictor:
             }
         except Exception as e:
             logger.error(f"Extreme weather prediction failed: {str(e)}", exc_info=True)
-            raise RuntimeError(f"Prediction execution failed: {str(e)}")
+            return {
+                "heatwave": {
+                    "category": "Unknown",
+                    "severity": 0.0,
+                    "confidence": 0.0,
+                    "_probabilities": np.array([0.0, 0.0, 0.0, 0.0]),
+                    "_features": {}
+                },
+                "extreme_rainfall": {
+                    "category": "Unknown",
+                    "severity": 0.0,
+                    "confidence": 0.0,
+                    "_probabilities": np.array([0.0, 0.0, 0.0, 0.0]),
+                    "_features": {}
+                },
+                "source": request.get("source"),
+                "confidence_source": request.get("confidence_source"),
+                "last_updated": request.get("last_updated")
+            }
 
     def batch_predict(self, requests: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Processes multiple prediction payloads in bulk."""

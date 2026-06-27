@@ -321,7 +321,17 @@ class DroughtPredictor:
             
         except Exception as e:
             logger.error(f"Prediction failed: {str(e)}", exc_info=True)
-            raise
+            return {
+                "drought_category": "Unknown",
+                "severity_score": 0.0,
+                "drought_risk_score": 0.0,
+                "confidence_score": 0.0,
+                "confidence_level": "Low",
+                "probabilities": {"Low": 0.0, "Medium": 0.0, "High": 0.0, "Extreme": 0.0},
+                "source": request.get("source"),
+                "confidence_source": request.get("confidence_source"),
+                "last_updated": request.get("last_updated")
+            }
  
     def batch_predict(self, requests: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """

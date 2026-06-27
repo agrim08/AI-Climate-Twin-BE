@@ -5,12 +5,12 @@ A production-ready multi-class drought evolution classifier has been trained and
 as a core component of the AI Climate Digital Twin of India.
 
 - **Best Model**: LightGBM
-- **Validation Macro F1**: 0.8841
-- **Test Macro F1**: 0.9096
-- **Test Accuracy**: 0.9106
-- **Test Weighted F1**: 0.9106
-- **Total Training Time**: 60.5s
-- **Inference Time**: 254.7ms
+- **Validation Macro F1**: 0.9423
+- **Test Macro F1**: 0.9431
+- **Test Accuracy**: 0.9422
+- **Test Weighted F1**: 0.9423
+- **Total Training Time**: 160.5s
+- **Inference Time**: 988.1ms
 
 ---
 
@@ -23,20 +23,20 @@ as a core component of the AI Climate Digital Twin of India.
 ## Class Distribution (Full Dataset)
 | Class | Count | % |
 |-------|-------|---|
-| Low | 4258 | 29.9% |
-| Medium | 4245 | 29.8% |
-| High | 3596 | 25.3% |
-| Extreme | 2142 | 15.0% |
+| Low | 18504 | 30.2% |
+| Medium | 18262 | 29.8% |
+| High | 15246 | 24.9% |
+| Extreme | 9170 | 15.0% |
 
 ---
 
 ## Model Comparison (Validation Set)
 | Model | Accuracy | Macro F1 | Weighted F1 | Train Time |
 |-------|----------|----------|-------------|------------|
-| LightGBM | 0.8989 | 0.8841 | 0.8991 | 14.6s |
-| XGBoost | 0.8989 | 0.8838 | 0.8993 | 16.3s |
-| ExtraTrees | 0.8652 | 0.8477 | 0.8656 | 2.1s |
-| RandomForest | 0.8546 | 0.8349 | 0.8551 | 5.5s |
+| LightGBM | 0.9417 | 0.9423 | 0.9417 | 21.9s |
+| XGBoost | 0.9369 | 0.9376 | 0.9369 | 24.8s |
+| ExtraTrees | 0.9043 | 0.9050 | 0.9042 | 7.3s |
+| RandomForest | 0.9015 | 0.9033 | 0.9015 | 21.5s |
 
 **Selection Criterion**: Macro F1 (penalises models that ignore minority classes)
 
@@ -58,25 +58,25 @@ as a core component of the AI Climate Digital Twin of India.
 ### Final Test-Set Metrics
 | Metric | Value |
 |--------|-------|
-| Accuracy | 0.9106 |
-| Macro Precision | 0.9090 |
-| Macro Recall | 0.9103 |
-| Macro F1 | 0.9096 |
-| Weighted F1 | 0.9106 |
-| Inference Time | 254.7 ms |
+| Accuracy | 0.9422 |
+| Macro Precision | 0.9445 |
+| Macro Recall | 0.9418 |
+| Macro F1 | 0.9431 |
+| Weighted F1 | 0.9423 |
+| Inference Time | 988.1 ms |
 
 ### Classification Report
 ```
               precision    recall  f1-score   support
 
-         Low       0.96      0.97      0.96       486
-      Medium       0.90      0.88      0.89       503
-        High       0.85      0.86      0.86       377
-     Extreme       0.93      0.93      0.93       279
+         Low       0.97      0.97      0.97      1927
+      Medium       0.92      0.94      0.93      2035
+        High       0.92      0.92      0.92      1854
+     Extreme       0.96      0.94      0.95      1312
 
-    accuracy                           0.91      1645
-   macro avg       0.91      0.91      0.91      1645
-weighted avg       0.91      0.91      0.91      1645
+    accuracy                           0.94      7128
+   macro avg       0.94      0.94      0.94      7128
+weighted avg       0.94      0.94      0.94      7128
 
 ```
 
@@ -85,21 +85,21 @@ weighted avg       0.91      0.91      0.91      1645
 ## Top 15 Feature Importances
 | Rank | Feature | Importance |
 |------|---------|------------|
-| 1 | `sm_zscore` | 12856.0000 |
-| 2 | `rainfall_spi` | 11724.0000 |
-| 3 | `temperature_zscore` | 10448.0000 |
-| 4 | `evaporation_pressure` | 6020.0000 |
-| 5 | `evaporation_stress` | 5982.0000 |
-| 6 | `temperature_anomaly` | 5516.0000 |
-| 7 | `rainfall_deficit_pct` | 5369.0000 |
-| 8 | `temperature_stress` | 3654.0000 |
-| 9 | `rainfall_deficit` | 3573.0000 |
-| 10 | `temperature_prev_3` | 3546.0000 |
-| 11 | `longitude` | 3305.0000 |
-| 12 | `rolling_sm_6m` | 3081.0000 |
-| 13 | `sm_anomaly` | 2818.0000 |
-| 14 | `sm_trend` | 2580.0000 |
-| 15 | `sm_deficit_pct` | 2455.0000 |
+| 1 | `rainfall_spi` | 12752.0000 |
+| 2 | `sm_zscore` | 11881.0000 |
+| 3 | `temperature_zscore` | 11001.0000 |
+| 4 | `evaporation_stress` | 8764.0000 |
+| 5 | `zone_aridity_index` | 7399.0000 |
+| 6 | `temperature_anomaly` | 5272.0000 |
+| 7 | `soil_moisture` | 5013.0000 |
+| 8 | `rainfall_deficit_pct` | 4477.0000 |
+| 9 | `temperature_stress` | 4266.0000 |
+| 10 | `compound_drought_stress` | 3913.0000 |
+| 11 | `rolling_temp_6m` | 3619.0000 |
+| 12 | `sm_deficit_pct` | 3282.0000 |
+| 13 | `sm_anomaly` | 3270.0000 |
+| 14 | `rainfall_deficit` | 3153.0000 |
+| 15 | `water_balance` | 2795.0000 |
 
 ---
 
@@ -120,39 +120,39 @@ weighted avg       0.91      0.91      0.91      1645
 ### Accuracy by Month
 | Month | Accuracy |
 |-------|----------|
-| 1 | 0.8652 |
-| 2 | 0.8440 |
-| 3 | 0.9291 |
-| 4 | 0.9149 |
-| 5 | 0.9362 |
-| 6 | 0.9291 |
-| 7 | 0.9645 |
-| 8 | 0.9220 |
-| 9 | 0.9291 |
-| 10 | 0.9149 |
-| 11 | 0.8865 |
-| 12 | 0.8830 |
+| 1 | 0.9512 |
+| 2 | 0.9495 |
+| 3 | 0.9377 |
+| 4 | 0.9091 |
+| 5 | 0.9276 |
+| 6 | 0.9478 |
+| 7 | 0.9579 |
+| 8 | 0.9646 |
+| 9 | 0.9192 |
+| 10 | 0.9478 |
+| 11 | 0.9579 |
+| 12 | 0.9360 |
 
 ---
 
 ## Drought Evolution Insights
-- **Mean Dry Month Streak by Category**: {'Extreme': 30.74, 'High': 37.13, 'Low': 40.3, 'Medium': 36.33}
-- **Recovery Signal (Extreme months)**: -1.4806598930955848
-- **Drought Momentum (Extreme vs Low)**: Extreme=-0.1123 vs Low=0.2155
+- **Mean Dry Month Streak by Category**: {'Extreme': 0.06, 'High': 0.07, 'Low': 0.04, 'Medium': 0.05}
+- **Recovery Signal (Extreme months)**: -4.993404703193601
+- **Drought Momentum (Extreme vs Low)**: Extreme=-0.1039 vs Low=0.0567
 
 ---
 
 ## Error Analysis
 
 ### Top Confusion Pairs (True → Predicted)
-- Medium->High: 37 instances
-- High->Medium: 32 instances
-- High->Extreme: 21 instances
-- Medium->Low: 21 instances
-- Extreme->High: 19 instances
+- High->Medium: 107 instances
+- Extreme->High: 78 instances
+- Low->Medium: 65 instances
+- Medium->High: 65 instances
+- Medium->Low: 52 instances
 
 ### Extreme Drought False-Negative Rate
-6.81% of actual Extreme droughts were missed.
+5.95% of actual Extreme droughts were missed.
 
 ---
 
