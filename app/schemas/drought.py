@@ -114,6 +114,14 @@ class EarlyWarningResponse(BaseModel):
     message: str = Field(..., description="Actionable alert warning notification message")
 
 
+class ResolvedStateResponse(BaseModel):
+    temperature_c: float = Field(..., description="Resolved temperature in Celsius")
+    rainfall_mm: float = Field(..., description="Resolved rainfall in mm")
+    soil_moisture: float = Field(..., description="Resolved soil moisture fraction")
+    evaporation: float = Field(..., description="Resolved evaporation flux")
+    runoff: float = Field(..., description="Resolved surface runoff")
+
+
 class DroughtTwinStateResponse(BaseModel):
     drought_prediction: DroughtPredictionResponse = Field(..., description="Core drought category and score prediction outputs")
     scenario_analysis: ScenarioSimulationResponse = Field(..., description="Drought simulation analysis comparison (baseline vs scenario)")
@@ -121,6 +129,7 @@ class DroughtTwinStateResponse(BaseModel):
     water_intelligence: WaterStressResponse = Field(..., description="Water resource stress and risk assessments")
     agriculture_intelligence: AgriculturalStressResponse = Field(..., description="Agricultural stress, risk, and crop indicators")
     early_warning: EarlyWarningResponse = Field(..., description="Drought early warning triggering and messages")
+    resolved_state: ResolvedStateResponse = Field(..., description="The resolved climate state variables for the requested time and location")
     source: Optional[str] = Field(None, description="Source of weather input: LIVE, DATABASE, or HISTORICAL")
     confidence_source: Optional[float] = Field(None, description="Confidence score of the data source")
     last_updated: Optional[str] = Field(None, description="Timestamp or date when the source was last updated")

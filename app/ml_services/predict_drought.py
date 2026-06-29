@@ -776,6 +776,13 @@ class DroughtPredictor:
             "water_intelligence": water_response,
             "agriculture_intelligence": agriculture_response,
             "early_warning": warning_response,
+            "resolved_state": {
+                "temperature_c": features_dict.get("temperature_c", 0.0),
+                "rainfall_mm": features_dict.get("rainfall_mm", 0.0),
+                "soil_moisture": features_dict.get("soil_moisture", 0.0),
+                "evaporation": features_dict.get("evabs", 0.0),
+                "runoff": features_dict.get("sro", 0.0)
+            },
             "source": request.get("source"),
             "confidence_source": request.get("confidence_source"),
             "last_updated": request.get("last_updated")
