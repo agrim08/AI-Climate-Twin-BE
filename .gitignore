@@ -244,5 +244,11 @@ data/processed/
 ml/data/raw/
 ml/data/processed/
 ml/models/
-ml_research/data/
+ml_research/data/raw/
+ml_research/data/processed/climate_master_rainfall.csv
+ml_research/data/processed/drought_training_dataset.csv
+ml_research/data/processed/extreme_weather_dataset.csv
+ml_research/data/processed/rainfall_training_dataset.csv
 
+# Exception for required lookup dataset
+!ml_research/data/processed/climate_master.csv
