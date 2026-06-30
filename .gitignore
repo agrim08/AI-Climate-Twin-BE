@@ -218,7 +218,6 @@ __marimo__/
 .streamlit/secrets.toml
 
 # Models and Large file extensions
-*.pkl
 *.joblib
 *.grib
 *.h5
@@ -246,4 +245,4 @@ ml/data/raw/
 ml/data/processed/
 ml/models/
 ml_research/data/
-app/ml_services/models/
+
