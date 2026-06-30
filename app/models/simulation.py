@@ -18,8 +18,8 @@ class SimulationResult(Base):
     result_json: Mapped[dict] = mapped_column(JSONB, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
 
-    user: Mapped["User"] = relationship("User", back_populates="simulation_results")
-    district: Mapped["District"] = relationship("District", back_populates="simulation_results")
+    user: Mapped["User"] = relationship("User", back_populates="simulation_results")  # noqa: F821
+    district: Mapped["District"] = relationship("District", back_populates="simulation_results")  # noqa: F821
 
     __table_args__ = (
         Index("ix_sim_results_user_id", "user_id"),

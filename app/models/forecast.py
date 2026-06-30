@@ -13,7 +13,7 @@ class Forecast(Base):
     predicted_temperature: Mapped[float] = mapped_column(Float, nullable=False)
     forecast_date: Mapped[date] = mapped_column(Date, nullable=False)
 
-    district: Mapped["District"] = relationship("District", back_populates="forecasts")
+    district: Mapped["District"] = relationship("District", back_populates="forecasts")  # noqa: F821
 
     __table_args__ = (
         Index("ix_forecasts_district_date", "district_id", "forecast_date"),

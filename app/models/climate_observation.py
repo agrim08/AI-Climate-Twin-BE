@@ -14,7 +14,7 @@ class ClimateObservation(Base):
     humidity: Mapped[float] = mapped_column(Float, nullable=False)
     observation_date: Mapped[date] = mapped_column(Date, nullable=False)
 
-    district: Mapped["District"] = relationship("District", back_populates="observations")
+    district: Mapped["District"] = relationship("District", back_populates="observations")  # noqa: F821
 
     __table_args__ = (
         Index("ix_climate_obs_district_date", "district_id", "observation_date"),

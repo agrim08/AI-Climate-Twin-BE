@@ -12,12 +12,12 @@ class District(Base):
     latitude: Mapped[float] = mapped_column(Float, nullable=False)
     longitude: Mapped[float] = mapped_column(Float, nullable=False)
 
-    observations: Mapped[list["ClimateObservation"]] = relationship(
+    observations: Mapped[list["ClimateObservation"]] = relationship(  # noqa: F821
         "ClimateObservation", back_populates="district", cascade="all, delete-orphan"
     )
-    forecasts: Mapped[list["Forecast"]] = relationship(
+    forecasts: Mapped[list["Forecast"]] = relationship(  # noqa: F821
         "Forecast", back_populates="district", cascade="all, delete-orphan"
     )
-    simulation_results: Mapped[list["SimulationResult"]] = relationship(
+    simulation_results: Mapped[list["SimulationResult"]] = relationship(  # noqa: F821
         "SimulationResult", back_populates="district", cascade="all, delete-orphan"
     )
