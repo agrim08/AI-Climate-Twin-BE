@@ -216,25 +216,34 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
-# Models
+
+# Models and Large file extensions
 *.pkl
 *.joblib
+*.grib
+*.h5
+*.hdf5
+*.nc
+*.csv
 
-# Python cache
+# Python cache & logs
 __pycache__/
 *.pyc
+*.log
 
-# Environment
+# Environments
 .env
 venv/
 .venv/
-*.csv
-*.nc
+
+# IDE settings
 .vscode/
 
-# Logs
-*.log
-
-# Large datasets
+# Large datasets & directories
 data/raw/
 data/processed/
+ml/data/raw/
+ml/data/processed/
+ml/models/
+ml_research/data/
+app/ml_services/models/

@@ -1,0 +1,43 @@
+fastapi>=0.110.0
+uvicorn[standard]>=0.28.0
+
+# Data Processing
+pandas>=2.3.0
+numpy>=2.3.1
+
+# Climate Data
+xarray>=2025.6.1
+netCDF4>=1.7.2
+
+# Machine Learning
+scikit-learn>=1.7.0
+xgboost>=3.0.2
+lightgbm>=4.6.0
+
+# Model Persistence
+joblib>=1.5.1
+
+# Visualization & EDA
+matplotlib>=3.10.3
+seaborn>=0.13.2
+
+# API Downloads (ERA5)
+cdsapi>=0.7.7
+
+# Utilities
+tqdm>=4.67.1
+
+# Database and Core
+sqlalchemy[asyncio]>=2.0.28
+alembic>=1.13.1
+asyncpg>=0.29.0
+pydantic>=2.6.4
+pydantic-settings>=2.2.1
+python-dotenv>=1.0.1
+greenlet>=3.0.3
+email-validator>=2.0.0
+python-jose[cryptography]>=3.3.0
+httpx>=0.27.0
+python-multipart>=0.0.7
+
+google-genai>=0.1.0
