@@ -86,7 +86,7 @@ jobs:
           cache-to: type=gha,mode=max
 
   deploy:
-    name: Deploy to Oracle Cloud
+    name: Deploy to AWS EC2
     needs: build-and-push
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
@@ -98,9 +98,9 @@ jobs:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.ORACLE_HOST }}
-          username: ${{ secrets.ORACLE_USER }}
-          key: ${{ secrets.ORACLE_SSH_KEY }}
+          host: ${{ secrets.AWS_HOST }}
+          username: ${{ secrets.AWS_USER }}
+          key: ${{ secrets.AWS_SSH_KEY }}
           port: 22
           script: |
             # Create project directory if it doesn't exist
